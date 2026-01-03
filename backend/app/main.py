@@ -18,7 +18,7 @@ from app.models import (
     DijkstraInput, EditDistanceInput, LISInput, RodCuttingInput
 )
 
-app = FastAPI(title="Algorithm Visualizer API")
+app = FastAPI(title="Algorithm Visualizer API", root_path="/api")
 
 app.add_middleware(
     CORSMiddleware,

@@ -10,7 +10,7 @@ import type {
     DijkstraInput
 } from '../types';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = '/api';
 
 export const api = {
     solveKnapsack: async (type: AlgorithmType, data: KnapsackInput): Promise<AlgorithmResult> => {
