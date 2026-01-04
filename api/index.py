@@ -1,27 +1,21 @@
-import sys
-import os
-
-# Add the backend directory to the path so imports work
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
-# Import algorithm modules
-from app.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy
-from app.algorithms.coin_change import solve_coin_change_dp, solve_coin_change_greedy
-from app.algorithms.interval_scheduling import solve_interval_scheduling_greedy, solve_interval_scheduling_dp
-from app.algorithms.matrix_chain import solve_matrix_chain_dp
-from app.algorithms.huffman import solve_huffman
-from app.algorithms.lcs import solve_lcs_dp
-from app.algorithms.dijkstra import solve_dijkstra
-from app.algorithms.prims import solve_prims
-from app.algorithms.kruskals import solve_kruskals
-from app.algorithms.edit_distance import solve_edit_distance_dp
-from app.algorithms.lis import solve_lis_dp
-from app.algorithms.rod_cutting import solve_rod_cutting_dp
-from app.models import (
+# Import algorithm modules from api folder
+from api.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy
+from api.algorithms.coin_change import solve_coin_change_dp, solve_coin_change_greedy
+from api.algorithms.interval_scheduling import solve_interval_scheduling_greedy, solve_interval_scheduling_dp
+from api.algorithms.matrix_chain import solve_matrix_chain_dp
+from api.algorithms.huffman import solve_huffman
+from api.algorithms.lcs import solve_lcs_dp
+from api.algorithms.dijkstra import solve_dijkstra
+from api.algorithms.prims import solve_prims
+from api.algorithms.kruskals import solve_kruskals
+from api.algorithms.edit_distance import solve_edit_distance_dp
+from api.algorithms.lis import solve_lis_dp
+from api.algorithms.rod_cutting import solve_rod_cutting_dp
+from api.models import (
     AlgorithmType, AlgorithmResult, KnapsackInput, CoinChangeInput, 
     IntervalSchedulingInput, MatrixChainInput, HuffmanInput, LCSInput, 
     DijkstraInput, EditDistanceInput, LISInput, RodCuttingInput
