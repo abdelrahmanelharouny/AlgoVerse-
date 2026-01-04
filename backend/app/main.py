@@ -99,3 +99,6 @@ def solve_lis_endpoint(data: LISInput):
 def solve_rod_cutting_endpoint(data: RodCuttingInput):
     return solve_rod_cutting_dp(data)
 
+# Vercel Serverless Handler
+from mangum import Mangum
+handler = Mangum(app)
