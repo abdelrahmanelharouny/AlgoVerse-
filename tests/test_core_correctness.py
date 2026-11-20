@@ -1,10 +1,12 @@
 import pytest
 
-from api.models import CoinChangeInput, DijkstraInput, LISInput, KnapsackInput, KnapsackItem
+from api.models import CoinChangeInput, DijkstraInput, LISInput, KnapsackInput, KnapsackItem, LCSInput, RodCuttingInput
 from api.algorithms.coin_change import solve_coin_change_dp, solve_coin_change_greedy
 from api.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy
 from api.algorithms.dijkstra import solve_dijkstra
 from api.algorithms.lis import solve_lis_dp
+from api.algorithms.lcs import solve_lcs_dp
+from api.algorithms.rod_cutting import solve_rod_cutting_dp
 
 
 def test_coin_change_dp_finds_optimum_when_greedy_does_not():
@@ -107,3 +109,29 @@ def test_knapsack_rejects_non_positive_weights():
     data = KnapsackInput(capacity=10, items=[KnapsackItem(id=1, weight=0, value=10)])
     with pytest.raises(ValueError, match="positive"):
         solve_knapsack_greedy(data)
+
+def test_lcs_exposes_text_in_result_contract():
+    result = solve_lcs_dp(LCSInput(text1="AGGTAB", text2="GXTXAYB"))
+
+    assert result.result_value == 4
+    assert result.result_text == "GTAB"
+    assert result.steps[-1].data["lcs"] == result.result_text
+
+
+def test_rod_cutting_finds_optimal_revenue_and_reconstructs_cuts():
+    result = solve_rod_cutting_dp(
+        RodCuttingInput(length=4, prices=[1, 5, 8, 9])
+    )
+
+    assert result.result_value == 10
+    assert result.selected_items == [2, 2]
+    assert sum(result.selected_items) == 4
+
+
+def test_rod_cutting_handles_zero_length_and_rejects_missing_prices():
+    zero = solve_rod_cutting_dp(RodCuttingInput(length=0, prices=[]))
+    assert zero.result_value == 0
+    assert zero.selected_items == []
+
+    with pytest.raises(ValueError, match="cannot be formed"):
+        solve_rod_cutting_dp(RodCuttingInput(length=3, prices=[]))
