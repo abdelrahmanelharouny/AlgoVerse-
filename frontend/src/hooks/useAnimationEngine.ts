@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Step } from '../types';
 
 interface UseAnimationEngineProps {
@@ -7,6 +7,14 @@ interface UseAnimationEngineProps {
     onStepChange?: (index: number, step: Step) => void;
 }
 
+/**
+ * Playback controller for algorithm timelines.
+ *
+ * - Keeps the timer stable when parent callbacks are recreated.
+ * - Supports deterministic manual stepping and playback.
+ * - Stops safely when a new result replaces the previous timeline.
+ * - Never starts a timer for an empty timeline or an invalid speed.
+ */
 export const useAnimationEngine = ({
     steps,
     speed,
@@ -15,69 +23,108 @@ export const useAnimationEngine = ({
     const [currentStepIndex, setCurrentStepIndex] = useState(-1);
     const [isPlaying, setIsPlaying] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const callbackRef = useRef(onStepChange);
+    const stepsRef = useRef(steps);
+
+    useEffect(() => {
+        callbackRef.current = onStepChange;
+    }, [onStepChange]);
+
+    useEffect(() => {
+        if (stepsRef.current !== steps) {
+            stepsRef.current = steps;
+            setIsPlaying(false);
+            setCurrentStepIndex(-1);
+        }
+    }, [steps]);
+
+    const clearTimer = useCallback(() => {
+        if (timerRef.current !== null) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    }, []);
+
+    const emitStep = useCallback((index: number) => {
+        const step = stepsRef.current[index];
+        if (step) callbackRef.current?.(index, step);
+    }, []);
 
     const currentStep = currentStepIndex >= 0 && currentStepIndex < steps.length
         ? steps[currentStepIndex]
         : null;
 
     const progress = steps.length > 0
-        ? ((currentStepIndex + 1) / steps.length) * 100
+        ? Math.max(0, Math.min(100, ((currentStepIndex + 1) / steps.length) * 100))
         : 0;
 
     useEffect(() => {
-        if (isPlaying && currentStepIndex < steps.length - 1) {
-            timerRef.current = setTimeout(() => {
-                const nextIndex = currentStepIndex + 1;
-                setCurrentStepIndex(nextIndex);
-                if (onStepChange && steps[nextIndex]) {
-                    onStepChange(nextIndex, steps[nextIndex]);
-                }
-            }, 1000 / speed);
-        } else if (currentStepIndex >= steps.length - 1) {
-            setIsPlaying(false);
+        clearTimer();
+
+        if (!isPlaying || steps.length === 0) {
+            if (steps.length === 0) setIsPlaying(false);
+            return;
         }
 
-        return () => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-            }
-        };
-    }, [isPlaying, currentStepIndex, steps, speed, onStepChange]);
-
-    const togglePlay = () => {
         if (currentStepIndex >= steps.length - 1) {
-            setCurrentStepIndex(-1);
+            setIsPlaying(false);
+            return;
         }
-        setIsPlaying(!isPlaying);
-    };
 
-    const nextStep = () => {
-        if (currentStepIndex < steps.length - 1) {
+        const safeSpeed = Number.isFinite(speed) && speed > 0 ? speed : 1;
+        timerRef.current = setTimeout(() => {
             const nextIndex = currentStepIndex + 1;
             setCurrentStepIndex(nextIndex);
-            if (onStepChange && steps[nextIndex]) {
-                onStepChange(nextIndex, steps[nextIndex]);
-            }
-        }
-    };
+            emitStep(nextIndex);
+        }, 1000 / safeSpeed);
 
-    const prevStep = () => {
-        if (currentStepIndex > -1) {
-            const prevIndex = currentStepIndex - 1;
-            setCurrentStepIndex(prevIndex);
-            if (onStepChange && prevIndex >= 0 && steps[prevIndex]) {
-                onStepChange(prevIndex, steps[prevIndex]);
-            }
-        }
-    };
+        return clearTimer;
+    }, [isPlaying, currentStepIndex, steps.length, speed, clearTimer, emitStep]);
 
-    const reset = () => {
+    useEffect(() => clearTimer, [clearTimer]);
+
+    const togglePlay = useCallback(() => {
+        if (stepsRef.current.length === 0) return;
+
+        setIsPlaying(previous => {
+            if (previous) return false;
+            setCurrentStepIndex(index => index >= stepsRef.current.length - 1 ? -1 : index);
+            return true;
+        });
+    }, []);
+
+    const nextStep = useCallback(() => {
+        setIsPlaying(false);
+        setCurrentStepIndex(index => {
+            const nextIndex = Math.min(index + 1, stepsRef.current.length - 1);
+            if (nextIndex >= 0) emitStep(nextIndex);
+            return nextIndex;
+        });
+    }, [emitStep]);
+
+    const prevStep = useCallback(() => {
+        setIsPlaying(false);
+        setCurrentStepIndex(index => {
+            const previousIndex = Math.max(-1, index - 1);
+            if (previousIndex >= 0) emitStep(previousIndex);
+            return previousIndex;
+        });
+    }, [emitStep]);
+
+    const reset = useCallback(() => {
+        clearTimer();
         setIsPlaying(false);
         setCurrentStepIndex(-1);
-        if (timerRef.current) {
-            clearTimeout(timerRef.current);
-        }
-    };
+    }, [clearTimer]);
+
+    const seekToStep = useCallback((index: number) => {
+        setIsPlaying(false);
+        const safeIndex = stepsRef.current.length === 0
+            ? -1
+            : Math.max(-1, Math.min(index, stepsRef.current.length - 1));
+        setCurrentStepIndex(safeIndex);
+        if (safeIndex >= 0) emitStep(safeIndex);
+    }, [emitStep]);
 
     return {
         currentStep,
@@ -88,6 +135,6 @@ export const useAnimationEngine = ({
         prevStep,
         reset,
         progress,
-        setCurrentStepIndex
+        setCurrentStepIndex: seekToStep
     };
 };
