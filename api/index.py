@@ -35,21 +35,27 @@ app.add_middleware(
 def read_root():
     return {"message": "Algorithm Visualizer API"}
 
+def _run_validated(solver, data):
+    try:
+        return solver(data)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
 @app.post("/solve/knapsack/{algorithm_type}", response_model=AlgorithmResult)
 def solve_knapsack(algorithm_type: str, data: KnapsackInput):
     if algorithm_type == AlgorithmType.DP:
-        return solve_knapsack_dp(data)
+        return _run_validated(solve_knapsack_dp, data)
     elif algorithm_type == AlgorithmType.GREEDY:
-        return solve_knapsack_greedy(data)
+        return _run_validated(solve_knapsack_greedy, data)
     else:
         raise HTTPException(status_code=400, detail=f"Unknown algorithm type: {algorithm_type}")
 
 @app.post("/solve/coin-change/{algorithm_type}", response_model=AlgorithmResult)
 def solve_coin_change(algorithm_type: str, data: CoinChangeInput):
     if algorithm_type == AlgorithmType.DP:
-        return solve_coin_change_dp(data)
+        return _run_validated(solve_coin_change_dp, data)
     elif algorithm_type == AlgorithmType.GREEDY:
-        return solve_coin_change_greedy(data)
+        return _run_validated(solve_coin_change_greedy, data)
     else:
         raise HTTPException(status_code=400, detail=f"Unknown algorithm type: {algorithm_type}")
 
@@ -79,7 +85,7 @@ def solve_lcs_endpoint(data: LCSInput):
 
 @app.post("/solve/dijkstra", response_model=AlgorithmResult)
 def solve_dijkstra_endpoint(data: DijkstraInput):
-    return solve_dijkstra(data)
+    return _run_validated(solve_dijkstra, data)
 
 @app.post("/solve/prims", response_model=AlgorithmResult)
 def solve_prims_endpoint(data: DijkstraInput):

@@ -1,0 +1,21 @@
+name: Core correctness tests
+
+on:
+  push:
+    branches: [main, "fix/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  algorithm-regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run algorithm regression tests
+        run: PYTHONPATH=. pytest -q

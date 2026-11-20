@@ -1,107 +1,76 @@
 import heapq
 import time
-from typing import Dict, List, Any
-from api.models import Step, StepType, AlgorithmResult, Metrics, DijkstraInput
 
-# Prim's uses the same input structure as Dijkstra (Graph + Start Node)
+from api.models import Step, StepType, AlgorithmResult, Metrics, DijkstraInput
+from api.algorithms.graph_utils import normalize_undirected_graph
+
+
 def solve_prims(data: DijkstraInput) -> AlgorithmResult:
-    start_time = time.time()
-    steps = []
-    
-    graph = data.graph
+    """Compute a minimum spanning forest using Prim's algorithm."""
+    start_time = time.perf_counter()
+    nodes, adjacency, _ = normalize_undirected_graph(data.graph)
     start_node = data.start_node
-    
-    # Priority Queue: (weight, from_node, to_node)
-    # We start with edges from the start node
-    pq = []
-    
-    visited = set([start_node])
+    if start_node not in adjacency:
+        raise ValueError(f"Start node {start_node!r} is not present in the graph.")
+
+    visited = set()
     mst_edges = []
-    mst_weight = 0
-    
-    steps.append(Step(
+    total_weight = 0
+    components = 0
+    steps = [Step(
         type=StepType.INIT,
-        description=f"Initialized Prim's Algorithm starting at {start_node}",
-        data={
-            "visited": list(visited),
-            "mst_edges": [],
-            "graph": graph,
-            "start_node": start_node
-        }
-    ))
-    
-    # Add initial edges
-    if start_node in graph:
-        for neighbor, weight in graph[start_node].items():
-            heapq.heappush(pq, (weight, start_node, neighbor))
+        description=f"Initialized Prim's algorithm from {start_node}",
+        data={"graph": data.graph, "start_node": start_node, "visited": [], "mst_edges": []},
+    )]
+
+    roots = [start_node] + [node for node in nodes if node != start_node]
+    for root in roots:
+        if root in visited:
+            continue
+        components += 1
+        visited.add(root)
+        queue = []
+        for neighbor, weight in adjacency[root].items():
+            heapq.heappush(queue, (weight, root, neighbor))
             steps.append(Step(
                 type=StepType.HIGHLIGHT,
-                description=f"Added edge {start_node}->{neighbor} (weight {weight}) to PQ",
-                data={
-                     "current_node": start_node,
-                     "checking_neighbor": neighbor,
-                     "edge_weight": weight
-                }
+                description=f"Added edge {root}-{neighbor} (weight {weight}) to priority queue",
+                data={"current_node": root, "checking_neighbor": neighbor, "edge_weight": weight},
             ))
 
-    while pq:
-        # Get smallest edge
-        weight, u, v = heapq.heappop(pq)
-        
-        # If v is already visited, skip (cycle)
-        if v in visited:
-            continue
-            
-        steps.append(Step(
-            type=StepType.PICK,
-            description=f"Selected edge {u}->{v} (weight {weight}) for MST",
-            data={
-                "u": u,
-                "v": v,
-                "weight": weight
-            }
-        ))
-        
-        # Add to MST
-        visited.add(v)
-        mst_edges.append({"u": u, "v": v, "weight": weight})
-        mst_weight += weight
-        
-        steps.append(Step(
-            type=StepType.UPDATE,
-            description=f"Included node {v} in MST. Total weight: {mst_weight}",
-            data={
-                "visited": list(visited),
-                "mst_edges": mst_edges,
-                "node": v
-            }
-        ))
-        
-        # Add neigbors of v
-        if v in graph:
-            for neighbor, w in graph[v].items():
+        while queue:
+            weight, source, target = heapq.heappop(queue)
+            if target in visited:
+                continue
+            visited.add(target)
+            total_weight += weight
+            edge = {"u": source, "v": target, "weight": weight}
+            mst_edges.append(edge)
+            steps.append(Step(
+                type=StepType.PICK,
+                description=f"Selected edge {source}-{target} (weight {weight})",
+                data={"u": source, "v": target, "weight": weight},
+            ))
+            steps.append(Step(
+                type=StepType.UPDATE,
+                description=f"Added {target} to the spanning forest; total weight: {total_weight}",
+                data={"visited": sorted(visited), "mst_edges": list(mst_edges),
+                      "node": target, "total_weight": total_weight},
+            ))
+            for neighbor, next_weight in adjacency[target].items():
                 if neighbor not in visited:
-                    heapq.heappush(pq, (w, v, neighbor))
-                    steps.append(Step(
-                        type=StepType.HIGHLIGHT,
-                        description=f"Added edge {v}->{neighbor} (weight {w}) to PQ",
-                        data={
-                            "current_node": v,
-                            "checking_neighbor": neighbor,
-                            "edge_weight": w
-                        }
-                    ))
+                    heapq.heappush(queue, (next_weight, target, neighbor))
 
-    end_time = time.time()
-    
+    steps.append(Step(
+        type=StepType.SOLUTION,
+        description=("Minimum spanning tree found" if components == 1
+                     else f"Minimum spanning forest found across {components} components"),
+        data={"mst_edges": mst_edges, "total_weight": total_weight,
+              "components": components, "is_spanning_tree": components == 1},
+    ))
+    elapsed = time.perf_counter() - start_time
     return AlgorithmResult(
-        steps=steps,
-        result_value=mst_weight,
-        selected_items=[],
-        metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity=f"O(V+E)",
-            time_complexity=f"O(E log V)",
-            step_count=len(steps)
-        )
+        steps=steps, result_value=total_weight, selected_items=[],
+        metrics=Metrics(time_taken=elapsed, space_complexity="O(V + E)",
+                        time_complexity="O(E log V)", step_count=len(steps)),
     )

@@ -36,6 +36,7 @@ class Metrics(BaseModel):
 class AlgorithmResult(BaseModel):
     steps: List[Step]
     result_value: float
+    result_text: Optional[str] = None
     selected_items: List[int] # Indices of selected items
     metrics: Metrics
 
