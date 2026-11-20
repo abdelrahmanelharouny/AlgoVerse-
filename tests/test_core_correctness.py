@@ -1,7 +1,8 @@
 import pytest
 
-from api.models import CoinChangeInput, DijkstraInput, LISInput
+from api.models import CoinChangeInput, DijkstraInput, LISInput, KnapsackInput, KnapsackItem
 from api.algorithms.coin_change import solve_coin_change_dp, solve_coin_change_greedy
+from api.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy
 from api.algorithms.dijkstra import solve_dijkstra
 from api.algorithms.lis import solve_lis_dp
 
@@ -69,3 +70,40 @@ def test_dijkstra_rejects_non_finite_or_negative_weights(weight):
     data = DijkstraInput(start_node="A", graph={"A": {"B": weight}, "B": {}})
     with pytest.raises(ValueError):
         solve_dijkstra(data)
+
+def test_fractional_knapsack_takes_partial_item_and_is_optimal():
+    data = KnapsackInput(
+        capacity=50,
+        items=[
+            KnapsackItem(id=1, weight=10, value=60),
+            KnapsackItem(id=2, weight=20, value=100),
+            KnapsackItem(id=3, weight=30, value=120),
+        ],
+    )
+    result = solve_knapsack_greedy(data)
+    solution = result.steps[-1].data
+
+    assert result.result_value == pytest.approx(240.0)
+    assert solution["selected_fractions"][-1]["fraction"] == pytest.approx(2 / 3)
+    assert solution["total_weight"] == pytest.approx(50.0)
+
+
+def test_zero_one_knapsack_does_not_take_fractional_items():
+    data = KnapsackInput(
+        capacity=50,
+        items=[
+            KnapsackItem(id=1, weight=10, value=60),
+            KnapsackItem(id=2, weight=20, value=100),
+            KnapsackItem(id=3, weight=30, value=120),
+        ],
+    )
+    result = solve_knapsack_dp(data)
+
+    assert result.result_value == 220
+    assert set(result.selected_items) == {2, 3}
+
+
+def test_knapsack_rejects_non_positive_weights():
+    data = KnapsackInput(capacity=10, items=[KnapsackItem(id=1, weight=0, value=10)])
+    with pytest.raises(ValueError, match="positive"):
+        solve_knapsack_greedy(data)
