@@ -63,3 +63,9 @@ def test_lis_returns_correct_original_indices_with_duplicates():
     assert [original[index] for index in indices] == sequence
     assert all(indices[i] < indices[i + 1] for i in range(len(indices) - 1))
     assert all(sequence[i] < sequence[i + 1] for i in range(len(sequence) - 1))
+
+@pytest.mark.parametrize("weight", [float("nan"), float("inf"), -1])
+def test_dijkstra_rejects_non_finite_or_negative_weights(weight):
+    data = DijkstraInput(start_node="A", graph={"A": {"B": weight}, "B": {}})
+    with pytest.raises(ValueError):
+        solve_dijkstra(data)
