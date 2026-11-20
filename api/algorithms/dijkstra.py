@@ -1,105 +1,115 @@
 import heapq
 import time
-from typing import Dict, List, Any
+from typing import Any
+
 from api.models import Step, StepType, AlgorithmResult, Metrics, DijkstraInput
 
+
 def solve_dijkstra(data: DijkstraInput) -> AlgorithmResult:
-    start_time = time.time()
-    steps = []
-    
-    # Graph format: { "A": {"B": 4, "C": 2}, "B": {"C": 1, "D": 5}, ... }
+    """Compute single-source shortest paths for a directed, non-negative weighted graph."""
+    start_time = time.perf_counter()
     graph = data.graph
     start_node = data.start_node
-    
-    # Initialize distances and priority queue
-    # Using float('inf') for infinity
-    distances = {node: float('inf') for node in graph}
+
+    if not isinstance(graph, dict) or not graph:
+        raise ValueError("Graph must be a non-empty adjacency dictionary.")
+    if start_node not in graph:
+        raise ValueError(f"Start node {start_node!r} is not present in the graph.")
+
+    # Include neighbor-only vertices and reject invalid weights before running.
+    nodes = set(graph)
+    for source, neighbors in graph.items():
+        if not isinstance(neighbors, dict):
+            raise ValueError(f"Neighbors for node {source!r} must be an adjacency dictionary.")
+        nodes.update(neighbors)
+        for target, weight in neighbors.items():
+            if isinstance(weight, bool) or not isinstance(weight, (int, float)):
+                raise ValueError(f"Edge {source!r}->{target!r} must have a numeric weight.")
+            if weight < 0:
+                raise ValueError("Dijkstra's algorithm does not support negative edge weights.")
+
+    distances = {node: float("inf") for node in nodes}
+    predecessors = {node: None for node in nodes}
     distances[start_node] = 0
-    
-    # Priority queue stores tuples of (current_distance, node_id)
-    pq = [(0, start_node)]
-    
-    # Predecessors to reconstruct path
-    predecessors = {node: None for node in graph}
-    
-    # Visited set
+    queue = [(0, start_node)]
     visited = set()
-    
-    steps.append(Step(
+    steps = [Step(
         type=StepType.INIT,
         description=f"Initialized Dijkstra from node {start_node}",
-        data={
-            "distances": {k: (float('inf') if v == float('inf') else 0) for k, v in distances.items()},
-            "visited": [],
-            "graph": graph,
-            "start_node": start_node
-        }
-    ))
-    
-    while pq:
-        # Step: Sort happens implicitly in heap, but we can visualize "Selection"
-        current_dist, current_node = heapq.heappop(pq)
-        
-        # If we found a shorter path to this node already, skip
-        if current_node in visited:
+        data={"distances": {node: (0 if node == start_node else None) for node in nodes},
+              "visited": [], "graph": graph, "start_node": start_node},
+    )]
+
+    while queue:
+        current_dist, current_node = heapq.heappop(queue)
+        # Ignore stale heap entries; a better route was pushed later.
+        if current_dist != distances[current_node] or current_node in visited:
             continue
 
         visited.add(current_node)
-        
         steps.append(Step(
             type=StepType.HIGHLIGHT,
             description=f"Visiting node {current_node} with distance {current_dist}",
-            data={
-                "current_node": current_node,
-                "current_dist": current_dist,
-                "visited": list(visited)
-            }
+            data={"current_node": current_node, "current_dist": current_dist,
+                  "visited": list(visited)},
         ))
-        
-        # For each neighbor
-        if current_node in graph:
-            for neighbor, weight in graph[current_node].items():
-                if neighbor in visited:
-                    continue
-                    
+
+        for neighbor, weight in graph.get(current_node, {}).items():
+            steps.append(Step(
+                type=StepType.HIGHLIGHT,
+                description=f"Checking edge {current_node} -> {neighbor} (weight {weight})",
+                data={"current_node": current_node, "checking_neighbor": neighbor,
+                      "edge_weight": weight},
+            ))
+            candidate = current_dist + weight
+            if candidate < distances[neighbor]:
+                old_distance = distances[neighbor]
+                distances[neighbor] = candidate
+                predecessors[neighbor] = current_node
+                heapq.heappush(queue, (candidate, neighbor))
                 steps.append(Step(
-                    type=StepType.HIGHLIGHT,
-                    description=f"Checking edge {current_node} -> {neighbor} (weight {weight})",
-                    data={
-                        "current_node": current_node,
-                        "checking_neighbor": neighbor,
-                        "edge_weight": weight
-                    }
+                    type=StepType.UPDATE,
+                    description=f"Relaxed edge {current_node}->{neighbor}: {candidate}",
+                    data={"node": neighbor, "new_dist": candidate,
+                          "old_dist": old_distance if old_distance != float("inf") else None,
+                          "distances": {node: (value if value != float("inf") else None)
+                                        for node, value in distances.items()}},
                 ))
-                
-                new_dist = current_dist + weight
-                
-                if new_dist < distances[neighbor]:
-                    old_dist = distances[neighbor]
-                    distances[neighbor] = new_dist
-                    predecessors[neighbor] = current_node
-                    heapq.heappush(pq, (new_dist, neighbor))
-                    
-                    steps.append(Step(
-                        type=StepType.UPDATE,
-                        description=f"Relaxing edge {current_node}->{neighbor}. Updated distance: {new_dist} (was {old_dist if old_dist != float('inf') else '∞'})",
-                        data={
-                            "node": neighbor,
-                            "new_dist": new_dist,
-                            "distances": {k: (9999 if v == float('inf') else v) for k, v in distances.items()} # Use 9999 for infinity in JSON
-                        }
-                    ))
-    
-    end_time = time.time()
-    
+
+    # A stable, JSON-friendly result contract: null means unreachable.
+    result_distances = {
+        node: (distance if distance != float("inf") else None)
+        for node, distance in distances.items()
+    }
+    paths = {}
+    for node in nodes:
+        if distances[node] == float("inf"):
+            paths[node] = None
+            continue
+        path = []
+        current = node
+        while current is not None:
+            path.append(current)
+            current = predecessors[current]
+        paths[node] = list(reversed(path))
+
+    reachable_distances = [d for d in distances.values() if d != float("inf")]
+    max_distance = max(reachable_distances, default=0)
+    steps.append(Step(
+        type=StepType.SOLUTION,
+        description="Shortest paths computed. Unreachable nodes are represented by null.",
+        data={"distances": result_distances, "paths": paths},
+    ))
+
+    elapsed = time.perf_counter() - start_time
     return AlgorithmResult(
         steps=steps,
-        result_value=0, # Not a single scalar for Dijkstra typically, but could be max dist or ignored
-        selected_items=[], # Not used
+        result_value=max_distance,
+        selected_items=[],
         metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity=f"O(V)",
-            time_complexity=f"O(E log V)",
-            step_count=len(steps)
-        )
+            time_taken=elapsed,
+            space_complexity="O(V)",
+            time_complexity="O((V + E) log V)",
+            step_count=len(steps),
+        ),
     )
