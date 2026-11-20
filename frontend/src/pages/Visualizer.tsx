@@ -14,6 +14,7 @@ import DPTableCanvas from '../components/DPTableCanvas';
 import HuffmanCanvas from '../components/HuffmanCanvas';
 import GreedyChainCanvas from '../components/GreedyChainCanvas';
 import StepTimeline from '../components/StepTimeline';
+import StepInspector from '../components/StepInspector';
 import AlgorithmInfoPanel from '../components/AlgorithmInfoPanel';
 import VisualizerInputPresets from '../components/VisualizerInputPresets';
 import confetti from 'canvas-confetti';
@@ -510,25 +511,12 @@ const Visualizer: React.FC = () => {
                     {renderCanvas()}
                 </div>
 
-                {/* Step Description Overlay */}
-                <AnimatePresence mode="wait">
-                    {currentStep && (
-                        <motion.div
-                            key={currentStepIndex}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md border border-slate-700 px-6 py-4 rounded-2xl shadow-2xl max-w-2xl text-center z-20"
-                        >
-                            <span className="text-xs font-bold tracking-wider text-indigo-400 uppercase mb-1 block">
-                                Step {currentStepIndex + 1} / {steps.length}
-                            </span>
-                            <p className="text-lg text-slate-200 font-medium">
-                                {currentStep.description || "Processing..."}
-                            </p>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <StepInspector
+                    step={currentStep}
+                    stepIndex={currentStepIndex}
+                    totalSteps={steps.length}
+                    algorithmName={algorithm || ''}
+                />
             </div>
 
             {/* Right Panel: Code & Details */}
