@@ -59,6 +59,7 @@ def test_lis_returns_correct_original_indices_with_duplicates():
 
     assert result.result_value == 3
     assert len(indices) == len(sequence) == 3
-    assert [3, 4, 1, 2, 2, 5][indices[0]:indices[-1] + 1]  # indices refer to original input
+    original = [3, 4, 1, 2, 2, 5]
+    assert [original[index] for index in indices] == sequence
     assert all(indices[i] < indices[i + 1] for i in range(len(indices) - 1))
     assert all(sequence[i] < sequence[i + 1] for i in range(len(sequence) - 1))
