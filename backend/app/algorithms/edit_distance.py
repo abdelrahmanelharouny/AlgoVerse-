@@ -123,6 +123,7 @@ def solve_edit_distance_dp(data) -> AlgorithmResult:
         steps=steps,
         result_value=dp[n][m],
         selected_items=[],
+        result_data={"distance": dp[n][m], "operations": operations, "source": s1, "target": s2},
         metrics=Metrics(
             time_taken=end_time - start_time,
             space_complexity=f"O({n}*{m})",
