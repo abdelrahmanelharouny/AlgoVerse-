@@ -1,78 +1,77 @@
 import time
-from typing import List
+
 from app.models import Step, StepType, AlgorithmResult, Metrics
 
+
 def solve_rod_cutting_dp(data) -> AlgorithmResult:
-    """
-    Rod Cutting Problem - DP Solution
-    Given a rod of length n and prices for each piece length, find max profit.
-    """
-    start_time = time.time()
-    steps = []
-    
+    """Maximize revenue while cutting the rod into priced integer-length pieces."""
+    start_time = time.perf_counter()
     length = data.length
-    prices = data.prices  # prices[i] = price for piece of length i+1
-    
-    # dp[i] = max revenue for rod of length i
-    dp = [0] * (length + 1)
-    cuts = [0] * (length + 1)  # To track where to cut
-    
-    steps.append(Step(
+    prices = data.prices
+
+    if isinstance(length, bool) or not isinstance(length, int) or length < 0:
+        raise ValueError("Rod length must be a non-negative integer.")
+    if any(isinstance(price, bool) or not isinstance(price, (int, float)) for price in prices):
+        raise ValueError("Rod prices must be numeric.")
+
+    dp = [float("-inf")] * (length + 1)
+    first_cut = [0] * (length + 1)
+    dp[0] = 0
+    steps = [Step(
         type=StepType.INIT,
-        description=f"Initialized DP array for rod of length {length}. prices = {prices}",
-        data={
-            "rows": 1,
-            "cols": length + 1,
-            "prices": prices
-        }
-    ))
-    
-    # Fill DP table
-    for i in range(1, length + 1):
-        best = -float('inf')
-        for j in range(1, i + 1):
-            if j <= len(prices):
+        description=f"Initialized rod-cutting DP for length {length}",
+        data={"rows": 1, "cols": length + 1, "prices": prices},
+    )]
+
+    for current_length in range(1, length + 1):
+        best = float("-inf")
+        for piece_length in range(1, min(current_length, len(prices)) + 1):
+            if dp[current_length - piece_length] == float("-inf"):
+                continue
+            candidate = prices[piece_length - 1] + dp[current_length - piece_length]
+            steps.append(Step(
+                type=StepType.HIGHLIGHT,
+                description=(f"For rod length {current_length}: try piece {piece_length} "
+                             f"with price {prices[piece_length - 1]}"),
+                data={"i": 0, "j": current_length, "cut_length": piece_length},
+            ))
+            if candidate > best:
+                best = candidate
+                first_cut[current_length] = piece_length
                 steps.append(Step(
-                    type=StepType.HIGHLIGHT,
-                    description=f"For rod length {i}: considering cut of {j} (price {prices[j-1]}) + remaining {i-j}",
-                    data={"i": 0, "j": i, "cut_length": j}
+                    type=StepType.UPDATE,
+                    description=f"New best for length {current_length}: {candidate}",
+                    data={"i": 0, "j": current_length, "value": candidate,
+                          "cut": piece_length},
                 ))
-                
-                if prices[j-1] + dp[i-j] > best:
-                    best = prices[j-1] + dp[i-j]
-                    cuts[i] = j
-                    
-                    steps.append(Step(
-                        type=StepType.UPDATE,
-                        description=f"New best for length {i}: cut {j} (${prices[j-1]}) + dp[{i-j}] (${dp[i-j]}) = ${best}",
-                        data={"i": 0, "j": i, "value": best, "cut": j}
-                    ))
-        
-        dp[i] = best
-    
-    # Backtrack to find the cuts
-    result_cuts = []
+        dp[current_length] = best
+
+    if dp[length] == float("-inf"):
+        raise ValueError(f"Rod length {length} cannot be formed from the supplied price list.")
+
+    cuts = []
     remaining = length
     while remaining > 0:
-        result_cuts.append(cuts[remaining])
-        remaining -= cuts[remaining]
-    
+        piece_length = first_cut[remaining]
+        if piece_length <= 0:
+            raise RuntimeError("Rod-cutting reconstruction failed.")
+        cuts.append(piece_length)
+        remaining -= piece_length
+
     steps.append(Step(
         type=StepType.SOLUTION,
-        description=f"Maximum Revenue: ${dp[length]}. Cuts: {result_cuts}",
-        data={"max_revenue": dp[length], "cuts": result_cuts, "dp": dp}
+        description=f"Maximum revenue: {dp[length]}. Cuts: {cuts}",
+        data={"max_revenue": dp[length], "cuts": cuts, "dp": dp},
     ))
-    
-    end_time = time.time()
-    
+    elapsed = time.perf_counter() - start_time
     return AlgorithmResult(
         steps=steps,
         result_value=dp[length],
-        selected_items=result_cuts,
+        selected_items=cuts,
         metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity="O(n)",
-            time_complexity="O(n²)",
-            step_count=len(steps)
-        )
+            time_taken=elapsed,
+            space_complexity=f"O({length})",
+            time_complexity=f"O({length} * min({length}, {len(prices)}))",
+            step_count=len(steps),
+        ),
     )
