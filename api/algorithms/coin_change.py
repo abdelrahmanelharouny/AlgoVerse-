@@ -1,21 +1,7 @@
 import time
 from typing import List
 
-from pydantic import BaseModel, Field, field_validator
-
-from api.models import AlgorithmResult, Step, StepType, Metrics
-
-
-class CoinChangeInput(BaseModel):
-    amount: int = Field(ge=0)
-    coins: List[int] = Field(min_length=1)
-
-    @field_validator("coins")
-    @classmethod
-    def validate_coins(cls, coins: List[int]) -> List[int]:
-        if any(not isinstance(coin, int) or isinstance(coin, bool) or coin <= 0 for coin in coins):
-            raise ValueError("Coin denominations must be positive integers.")
-        return sorted(set(coins))
+from api.models import AlgorithmResult, Step, StepType, Metrics, CoinChangeInput
 
 
 def _validate_input(data: CoinChangeInput) -> tuple[int, List[int]]:
