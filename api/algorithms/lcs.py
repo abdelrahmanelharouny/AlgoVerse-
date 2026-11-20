@@ -1,111 +1,56 @@
-from api.models import Step, StepType, AlgorithmResult, Metrics
-from collections import deque
-import time
+from time import perf_counter
+from typing import List
 
-class LCSInput(object): # Placeholder, will be defined in models.py
-    pass
+from from api.models import AlgorithmResult, LCSInput, Metrics, Step, StepType
 
-def solve_lcs_dp(data) -> AlgorithmResult:
-    start_time = time.time()
-    steps = []
-    
-    s1 = data.text1
-    s2 = data.text2
-    n = len(s1)
-    m = len(s2)
-    
-    # DP table to store lengths of longest common subsequence.
-    # Dimensions: (n+1) x (m+1) to accommodate empty strings at index 0.
-    dp = [[0 for _ in range(m + 1)] for _ in range(n + 1)]
-    
-    steps.append(Step(
-        type=StepType.INIT,
-        description=f"Initialized DP table of size ({n+1} x {m+1})",
-        data={
-            "rows": n + 1,
-            "cols": m + 1,
-            "row_labels": [""] + list(s1),
-            "col_labels": [""] + list(s2)
-        }
-    ))
-    
-    # Build DP Table
+
+def solve_lcs_dp(data: LCSInput) -> AlgorithmResult:
+    """Longest common subsequence with a replayable DP trace and final subsequence."""
+    started = perf_counter()
+    left_text, right_text = data.text1, data.text2
+    n, m = len(left_text), len(right_text)
+    dp = [[0] * (m + 1) for _ in range(n + 1)]
+    steps: List[Step] = [Step(type=StepType.INIT, description=f"Initialize an LCS table of size {n + 1} × {m + 1}", data={"rows": n + 1, "cols": m + 1, "row_labels": [""] + list(left_text), "col_labels": [""] + list(right_text)})]
+    operations = 0
+
     for i in range(1, n + 1):
         for j in range(1, m + 1):
-            
-            # Highlight current comparison
-            steps.append(Step(
-                type=StepType.HIGHLIGHT,
-                description=f"Comparing '{s1[i-1]}' vs '{s2[j-1]}'",
-                data={"active_cell": {"r": i, "c": j}, "compare": [s1[i-1], s2[j-1]]}
-            ))
-            
-            if s1[i - 1] == s2[j - 1]:
-                val = dp[i - 1][j - 1] + 1
-                dp[i][j] = val
-                
-                steps.append(Step(
-                    type=StepType.UPDATE,
-                    description=f"Characters match! 1 + dp[{i-1}][{j-1}] = {val}",
-                    data={
-                        "cell": {"r": i, "c": j}, 
-                        "value": val,
-                        "highlight_prev": {"r": i-1, "c": j-1}
-                    }
-                ))
+            operations += 1
+            steps.append(Step(type=StepType.HIGHLIGHT, description=f"Compare '{left_text[i - 1]}' with '{right_text[j - 1]}'", data={"active_cell": {"r": i, "c": j}, "compare": [left_text[i - 1], right_text[j - 1]]}))
+            if left_text[i - 1] == right_text[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+                dependencies = {"r": i - 1, "c": j - 1}
+                description = f"Characters match; take the diagonal value and add one → {dp[i][j]}"
+            elif dp[i - 1][j] >= dp[i][j - 1]:
+                dp[i][j] = dp[i - 1][j]
+                dependencies = [{"r": i - 1, "c": j}, {"r": i, "c": j - 1}]
+                description = f"No match; take the larger adjacent subsequence length → {dp[i][j]}"
             else:
-                val1 = dp[i - 1][j]
-                val2 = dp[i][j - 1]
-                val = max(val1, val2)
-                dp[i][j] = val
-                
-                steps.append(Step(
-                    type=StepType.UPDATE,
-                    description=f"No match. max(dp[{i-1}][{j}] ({val1}), dp[{i}][{j-1}] ({val2})) = {val}",
-                    data={
-                        "cell": {"r": i, "c": j}, 
-                        "value": val,
-                        "highlight_prev": [{"r": i-1, "c": j}, {"r": i, "c": j-1}]
-                    }
-                ))
-    
-    # Backtrack to find the LCS string
-    lcs_algo = []
+                dp[i][j] = dp[i][j - 1]
+                dependencies = [{"r": i - 1, "c": j}, {"r": i, "c": j - 1}]
+                description = f"No match; take the larger adjacent subsequence length → {dp[i][j]}"
+            steps.append(Step(type=StepType.UPDATE, description=description, data={"cell": {"r": i, "c": j}, "value": dp[i][j], "highlight_prev": dependencies}))
+
+    indices_left: List[int] = []
+    indices_right: List[int] = []
     i, j = n, m
-    path = []
-    
     while i > 0 and j > 0:
-        path.append({"r": i, "c": j})
-        if s1[i-1] == s2[j-1]:
-            lcs_algo.append(s1[i-1])
+        if left_text[i - 1] == right_text[j - 1]:
+            indices_left.append(i - 1)
+            indices_right.append(j - 1)
             i -= 1
             j -= 1
-        elif dp[i-1][j] > dp[i][j-1]:
+        elif dp[i - 1][j] >= dp[i][j - 1]:
             i -= 1
         else:
             j -= 1
-    
-    path.append({"r": 0, "c": 0}) # Optional: highlight start
-    lcs_algo.reverse()
-    result_str = "".join(lcs_algo)
-    
-    steps.append(Step(
-        type=StepType.SOLUTION,
-        description=f"LCS Found: {result_str}",
-        data={"path": path, "lcs": result_str}
-    ))
-
-    end_time = time.time()
-    
+    indices_left.reverse()
+    indices_right.reverse()
+    subsequence = "".join(left_text[index] for index in indices_left)
+    steps.append(Step(type=StepType.SOLUTION, description=f"LCS length is {len(subsequence)}: {subsequence}", data={"lcs": subsequence, "length": len(subsequence), "indices_text1": indices_left, "indices_text2": indices_right}))
+    elapsed = perf_counter() - started
     return AlgorithmResult(
-        steps=steps,
-        result_value=dp[n][m],
-        result_text=result_str,
-        selected_items=[],
-        metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity=f"O({m}*{n})",
-            time_complexity=f"O({m}*{n})",
-            step_count=len(steps)
-        )
+        steps=steps, result_value=dp[n][m], selected_items=[],
+        result_data={"lcs": subsequence, "length": dp[n][m], "indices_text1": indices_left, "indices_text2": indices_right},
+        metrics=Metrics(time_taken=elapsed, time_complexity="O(mn)", space_complexity="O(mn)", step_count=len(steps), operation_count=operations)
     )
