@@ -1,170 +1,139 @@
-import time
-from typing import List
-from app.models import KnapsackInput, AlgorithmResult, Step, StepType, Metrics
+from __future__ import annotations
+
+from time import perf_counter
+from typing import Any, Dict, List
+
+from from app.models import AlgorithmResult, KnapsackInput, Metrics, Step, StepType
+
+
+def _validate(data: KnapsackInput) -> None:
+    if data.capacity < 0:
+        raise ValueError("Capacity cannot be negative")
+    if any(item.weight < 0 for item in data.items):
+        raise ValueError("Item weights cannot be negative")
+
 
 def solve_knapsack_dp(data: KnapsackInput) -> AlgorithmResult:
-    start_time = time.time()
-    steps = []
-    capacity = data.capacity
-    items = data.items
+    """Exact 0/1 Knapsack using O(nW) dynamic programming."""
+    _validate(data)
+    started = perf_counter()
+    items, capacity = data.items, data.capacity
     n = len(items)
+    dp = [[0] * (capacity + 1) for _ in range(n + 1)]
+    steps: List[Step] = [
+        Step(type=StepType.INIT, description=f"Initialized a {n + 1} × {capacity + 1} DP table", data={"rows": n + 1, "cols": capacity + 1})
+    ]
+    operations = 0
 
-    # Initialize DP table
-    # dp[i][w] = max value using first i items with capacity w
-    dp = [[0 for _ in range(capacity + 1)] for _ in range(n + 1)]
-    
-    steps.append(Step(
-        type=StepType.INIT,
-        description=f"Initialized DP table of size ({n+1} x {capacity+1})",
-        data={"rows": n + 1, "cols": capacity + 1}
-    ))
-
-    # Fill DP table
-    for i in range(1, n + 1):
-        item = items[i-1]
-        for w in range(capacity + 1):
-            
-            # Highlight current cell calculation
+    for i, item in enumerate(items, start=1):
+        for current_capacity in range(capacity + 1):
+            operations += 1
+            excluded = dp[i - 1][current_capacity]
+            included = item.value + dp[i - 1][current_capacity - item.weight] if item.weight <= current_capacity else float("-inf")
+            take = included > excluded
+            dp[i][current_capacity] = included if take else excluded
             steps.append(Step(
                 type=StepType.HIGHLIGHT,
-                description=f"Calculating for Item {item.id} (wt:{item.weight}, val:{item.value}) at capacity {w}",
-                data={"i": i, "j": w}
+                description=f"Evaluating item {item.id} at capacity {current_capacity}",
+                data={"i": i, "j": current_capacity, "item_id": item.id, "compare": {"include": included if included != float("-inf") else None, "exclude": excluded}}
             ))
-
-            if item.weight <= w:
-                val_exclude = dp[i-1][w]
-                val_include = item.value + dp[i-1][w - item.weight]
-                
-                if val_include > val_exclude:
-                    dp[i][w] = val_include
-                    steps.append(Step(
-                        type=StepType.UPDATE,
-                        description=f"Include Item {item.id}: {item.value} + {dp[i-1][w-item.weight]} > {val_exclude}",
-                        data={
-                            "i": i, "j": w, "value": val_include,
-                            "action": "include",
-                            "prev_i": i-1, "prev_j_include": w-item.weight, "prev_j_exclude": w
-                        }
-                    ))
-                else:
-                    dp[i][w] = val_exclude
-                    steps.append(Step(
-                        type=StepType.UPDATE,
-                        description=f"Exclude Item {item.id}: {val_exclude} >= {val_include}",
-                        data={
-                            "i": i, "j": w, "value": val_exclude,
-                            "action": "exclude",
-                            "prev_i": i-1, "prev_j_exclude": w
-                        }
-                    ))
-            else:
-                dp[i][w] = dp[i-1][w]
-                steps.append(Step(
-                    type=StepType.UPDATE,
-                    description=f"Item {item.id} too heavy ({item.weight} > {w}). Copy from above.",
-                    data={
-                        "i": i, "j": w, "value": dp[i][w],
-                        "action": "skip",
-                        "prev_i": i-1, "prev_j_exclude": w
-                    }
-                ))
-
-    # Backtrack to find selected items
-    selected_items = []
-    w = capacity
-    for i in range(n, 0, -1):
-        if dp[i][w] != dp[i-1][w]:
-            item = items[i-1]
-            selected_items.append(item.id)
-            w -= item.weight
             steps.append(Step(
-                type=StepType.SOLUTION,
-                description=f"Backtracking: Item {item.id} was selected",
-                data={"item_id": item.id, "selected": True}
-            ))
-        else:
-             steps.append(Step(
-                type=StepType.SOLUTION,
-                description=f"Backtracking: Item {items[i-1].id} was NOT selected",
-                data={"item_id": items[i-1].id, "selected": False}
+                type=StepType.UPDATE,
+                description=f"{'Include' if take else 'Exclude'} item {item.id}: best value = {dp[i][current_capacity]}",
+                data={"i": i, "j": current_capacity, "value": dp[i][current_capacity], "action": "include" if take else "exclude", "item_id": item.id}
             ))
 
-    end_time = time.time()
-    
+    selected: List[Any] = []
+    current_capacity = capacity
+    for i in range(n, 0, -1):
+        if dp[i][current_capacity] != dp[i - 1][current_capacity]:
+            item = items[i - 1]
+            selected.append(item.id)
+            current_capacity -= item.weight
+            steps.append(Step(type=StepType.SOLUTION, description=f"Backtracking selected item {item.id}", data={"item_id": item.id, "selected": True}))
+    selected.reverse()
+    elapsed = perf_counter() - started
+
     return AlgorithmResult(
         steps=steps,
         result_value=dp[n][capacity],
-        selected_items=selected_items,
-        metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity=f"O({n} * {capacity})",
-            time_complexity=f"O({n} * {capacity})",
-            step_count=len(steps)
-        )
+        selected_items=selected,
+        result_data={"selected_items": selected, "total_weight": sum(item.weight for item in items if item.id in selected), "capacity": capacity, "optimal": True},
+        metrics=Metrics(time_taken=elapsed, time_complexity="O(nW)", space_complexity="O(nW)", step_count=len(steps), operation_count=operations)
     )
 
+
 def solve_knapsack_greedy(data: KnapsackInput) -> AlgorithmResult:
-    start_time = time.time()
-    steps = []
-    capacity = data.capacity
-    items = data.items
-    
-    # Calculate ratios
-    # We need to preserve original indices/objects, so we'll work with tuples or the objects themselves
-    # Let's assume we sort by value/weight ratio descending
-    
-    steps.append(Step(
-        type=StepType.SORT,
-        description="Calculating value/weight ratios for all items",
-        data={}
-    ))
-    
-    # Sort items by ratio
-    sorted_items = sorted(items, key=lambda x: x.value / x.weight, reverse=True)
-    
-    steps.append(Step(
-        type=StepType.SORT,
-        description="Sorted items by Ratio (Value/Weight) in descending order",
-        data={"sorted_order": [item.id for item in sorted_items]}
-    ))
+    """0/1 Knapsack density heuristic. This is not guaranteed to be optimal."""
+    _validate(data)
+    started = perf_counter()
+    steps: List[Step] = [Step(type=StepType.SORT, description="Rank items by value-to-weight ratio", data={})]
+    ordered = sorted(
+        data.items,
+        key=lambda item: (float("inf") if item.weight == 0 and item.value > 0 else (item.value / item.weight if item.weight else float("-inf"))),
+        reverse=True
+    )
+    steps.append(Step(type=StepType.SORT, description="Items sorted by descending value density", data={"sorted_order": [item.id for item in ordered]}))
 
-    current_weight = 0
+    total_weight = 0
     total_value = 0
-    selected_items = []
-
-    for item in sorted_items:
-        steps.append(Step(
-            type=StepType.HIGHLIGHT,
-            description=f"Considering Item {item.id} (Wt: {item.weight}, Val: {item.value}, Ratio: {item.value/item.weight:.2f})",
-            data={"item_id": item.id}
-        ))
-
-        if current_weight + item.weight <= capacity:
-            current_weight += item.weight
+    selected: List[Any] = []
+    for item in ordered:
+        ratio = float("inf") if item.weight == 0 and item.value > 0 else (item.value / item.weight if item.weight else 0)
+        if item.value > 0 and total_weight + item.weight <= data.capacity:
+            total_weight += item.weight
             total_value += item.value
-            selected_items.append(item.id)
-            steps.append(Step(
-                type=StepType.PICK,
-                description=f"Picked Item {item.id}. Current Weight: {current_weight}/{capacity}",
-                data={"item_id": item.id, "current_weight": current_weight, "total_value": total_value}
-            ))
+            selected.append(item.id)
+            steps.append(Step(type=StepType.PICK, description=f"Picked item {item.id} (ratio: {ratio:.2f})", data={"item_id": item.id, "weight": item.weight, "value": item.value, "ratio": ratio, "current_weight": total_weight, "total_value": total_value}))
         else:
-            steps.append(Step(
-                type=StepType.REJECT,
-                description=f"Rejected Item {item.id}. Adding it would exceed capacity ({current_weight} + {item.weight} > {capacity})",
-                data={"item_id": item.id, "current_weight": current_weight}
-            ))
+            steps.append(Step(type=StepType.REJECT, description=f"Skipped item {item.id}; adding it would not improve a feasible solution", data={"item_id": item.id, "weight": item.weight, "value": item.value, "current_weight": total_weight, "total_value": total_value}))
 
-    end_time = time.time()
-
+    elapsed = perf_counter() - started
     return AlgorithmResult(
-        steps=steps,
-        result_value=total_value,
-        selected_items=selected_items,
-        metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity="O(1) (auxiliary)", # Sorting takes O(N) or O(log N) stack space usually
-            time_complexity="O(N log N)",
-            step_count=len(steps)
-        )
+        steps=steps, result_value=total_value, selected_items=selected,
+        result_data={"selected_items": selected, "total_weight": total_weight, "capacity": data.capacity, "optimal": False, "method": "value_density_heuristic"},
+        metrics=Metrics(time_taken=elapsed, time_complexity="O(n log n)", space_complexity="O(n)", step_count=len(steps), operation_count=len(ordered))
+    )
+
+
+def solve_fractional_knapsack(data: KnapsackInput) -> AlgorithmResult:
+    """Optimal Fractional Knapsack: items may be taken partially."""
+    _validate(data)
+    started = perf_counter()
+    remaining = float(data.capacity)
+    total_value = 0.0
+    fractions: List[Dict[str, Any]] = []
+    steps: List[Step] = [Step(type=StepType.SORT, description="Sort items by value density; zero-weight positive-value items come first", data={})]
+    ordered = sorted(
+        data.items,
+        key=lambda item: (float("inf") if item.weight == 0 and item.value > 0 else (item.value / item.weight if item.weight else float("-inf"))),
+        reverse=True
+    )
+    steps.append(Step(type=StepType.SORT, description="Items sorted by descending value density", data={"sorted_order": [item.id for item in ordered]}))
+
+    for item in ordered:
+        if item.value <= 0:
+            fraction = 0.0
+        elif item.weight == 0:
+            fraction = 1.0
+        elif remaining <= 0:
+            fraction = 0.0
+        else:
+            fraction = min(1.0, remaining / item.weight)
+
+        if fraction > 0:
+            taken_weight = item.weight * fraction
+            taken_value = item.value * fraction
+            remaining -= taken_weight
+            total_value += taken_value
+            fractions.append({"item_id": item.id, "fraction": fraction, "weight_taken": taken_weight, "value_taken": taken_value})
+            steps.append(Step(type=StepType.PICK, description=f"Take {fraction:.1%} of item {item.id}", data={"item_id": item.id, "fraction": fraction, "weight": taken_weight, "value": taken_value, "current_weight": data.capacity - remaining, "total_value": total_value}))
+        else:
+            steps.append(Step(type=StepType.REJECT, description=f"Do not take item {item.id}", data={"item_id": item.id, "fraction": 0}))
+
+    elapsed = perf_counter() - started
+    return AlgorithmResult(
+        steps=steps, result_value=total_value, selected_items=[entry["item_id"] for entry in fractions],
+        result_data={"fractions": fractions, "total_weight": data.capacity - remaining, "remaining_capacity": remaining, "optimal": True, "method": "fractional_knapsack"},
+        metrics=Metrics(time_taken=elapsed, time_complexity="O(n log n)", space_complexity="O(n)", step_count=len(steps), operation_count=len(ordered))
     )
