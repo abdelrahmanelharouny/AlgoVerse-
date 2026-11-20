@@ -1,6 +1,6 @@
 import heapq
+import math
 import time
-from typing import Any
 
 from api.models import Step, StepType, AlgorithmResult, Metrics, DijkstraInput
 
@@ -16,15 +16,21 @@ def solve_dijkstra(data: DijkstraInput) -> AlgorithmResult:
     if start_node not in graph:
         raise ValueError(f"Start node {start_node!r} is not present in the graph.")
 
+    # Node identifiers are strings so heap tie-breaking is deterministic.
+    if any(not isinstance(node, str) for node in graph):
+        raise ValueError("Graph node identifiers must be strings.")
+
     # Include neighbor-only vertices and reject invalid weights before running.
     nodes = set(graph)
     for source, neighbors in graph.items():
         if not isinstance(neighbors, dict):
             raise ValueError(f"Neighbors for node {source!r} must be an adjacency dictionary.")
+        if any(not isinstance(node, str) for node in neighbors):
+            raise ValueError("Graph node identifiers must be strings.")
         nodes.update(neighbors)
         for target, weight in neighbors.items():
-            if isinstance(weight, bool) or not isinstance(weight, (int, float)):
-                raise ValueError(f"Edge {source!r}->{target!r} must have a numeric weight.")
+            if isinstance(weight, bool) or not isinstance(weight, (int, float)) or not math.isfinite(weight):
+                raise ValueError(f"Edge {source!r}->{target!r} must have a finite numeric weight.")
             if weight < 0:
                 raise ValueError("Dijkstra's algorithm does not support negative edge weights.")
 
