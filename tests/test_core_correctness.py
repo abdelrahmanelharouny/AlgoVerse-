@@ -7,6 +7,8 @@ from api.algorithms.dijkstra import solve_dijkstra
 from api.algorithms.lis import solve_lis_dp
 from api.algorithms.lcs import solve_lcs_dp
 from api.algorithms.rod_cutting import solve_rod_cutting_dp
+from api.algorithms.prims import solve_prims
+from api.algorithms.kruskals import solve_kruskals
 
 
 def test_coin_change_dp_finds_optimum_when_greedy_does_not():
@@ -135,3 +137,27 @@ def test_rod_cutting_handles_zero_length_and_rejects_missing_prices():
 
     with pytest.raises(ValueError, match="cannot be formed"):
         solve_rod_cutting_dp(RodCuttingInput(length=3, prices=[]))
+
+@pytest.mark.parametrize("solver", [solve_prims, solve_kruskals])
+def test_mst_algorithms_include_neighbor_only_nodes_and_report_disconnected_forest(solver):
+    data = DijkstraInput(
+        start_node="A",
+        graph={"A": {"B": 1}, "B": {"A": 1, "C": 2}, "D": {}},
+    )
+    result = solver(data)
+    solution = result.steps[-1].data
+
+    assert result.result_value == 3
+    assert len(solution["mst_edges"]) == 2
+    assert solution["components"] == 2
+    assert solution["is_spanning_tree"] is False
+
+
+@pytest.mark.parametrize("solver", [solve_prims, solve_kruskals])
+def test_mst_algorithms_reject_conflicting_undirected_edge_weights(solver):
+    data = DijkstraInput(
+        start_node="A",
+        graph={"A": {"B": 1}, "B": {"A": 2}},
+    )
+    with pytest.raises(ValueError, match="Conflicting weights"):
+        solver(data)
