@@ -45,7 +45,7 @@ class AlgorithmResult(BaseModel):
 
 class KnapsackItem(BaseModel):
     id: Union[int, str]
-    weight: float = Field(ge=0, le=1_000_000)
+    weight: int = Field(ge=0, le=1_000_000)
     value: float = Field(ge=-1_000_000_000, le=1_000_000_000)
 
 
