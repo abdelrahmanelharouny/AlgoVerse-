@@ -58,7 +58,7 @@ const Problems = () => {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [showFilters, setShowFilters] = useState(false);
 
-    const [completed, setCompleted] = useState<Set<string>>(getCompletedAlgorithms);
+    const [completed] = useState<Set<string>>(getCompletedAlgorithms);
     const [bookmarks, setBookmarks] = useState<Set<string>>(getBookmarks);
 
     const toggleBookmark = (id: string) => {
