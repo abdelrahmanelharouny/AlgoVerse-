@@ -100,11 +100,11 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
             const x = originX + cell.col * cellSize;
             const y = originY + cell.row * cellSize;
             ctx.fillStyle = 'rgba(14, 165, 233, 0.10)';
-            ctx.fillRect(x + 3, y + 3, cellSize - 6, CELL_SIZE - 6);
+            ctx.fillRect(x + 3, y + 3, cellSize - 6, cellSize - 6);
             ctx.strokeStyle = '#0ea5e9';
             ctx.lineWidth = 2;
             ctx.setLineDash([4, 3]);
-            ctx.strokeRect(x + 3, y + 3, CELL_SIZE - 6, CELL_SIZE - 6);
+            ctx.strokeRect(x + 3, y + 3, cellSize - 6, cellSize - 6);
             ctx.setLineDash([]);
         }
 
@@ -118,10 +118,10 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
                 ctx.fillStyle = isActive
                     ? 'rgba(99, 102, 241, 0.32)'
                     : value !== 0 ? '#1e293b' : '#0b1220';
-                ctx.fillRect(x + 2, y + 2, cellSize - 4, CELL_SIZE - 4);
+                ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
                 ctx.strokeStyle = isActive ? '#a5b4fc' : '#293548';
                 ctx.lineWidth = isActive ? 2.5 : 1;
-                ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
 
                 ctx.fillStyle = isActive ? '#ffffff' : value !== 0 ? '#e2e8f0' : '#64748b';
                 ctx.font = isActive ? 'bold ' + Math.max(8, Math.round(cellSize * 0.34)) + 'px Inter, sans-serif' : Math.max(8, Math.round(cellSize * 0.3)) + 'px Inter, sans-serif';
