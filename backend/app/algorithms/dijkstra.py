@@ -2,7 +2,7 @@ import heapq
 from time import perf_counter
 from typing import Dict, List
 
-from from app.models import AlgorithmResult, DijkstraInput, Metrics, Step, StepType
+from app.models import AlgorithmResult, DijkstraInput, Metrics, Step, StepType
 
 
 def solve_dijkstra(data: DijkstraInput) -> AlgorithmResult:
