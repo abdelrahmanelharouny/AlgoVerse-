@@ -51,7 +51,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                                 {winner === 'dp' ? 'Dynamic Programming' : 'Greedy'} Found Better Solution
                             </div>
                             <div className="text-sm text-slate-300">
-                                {difference} units better ({percentOff}% improvement)
+                                {difference} units {objective === 'minimize' ? 'fewer' : 'more'} than the other approach ({percentOff}% relative difference)
                             </div>
                         </div>
                     </div>
@@ -107,7 +107,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                             {!greedyOptimal && winner !== 'greedy' && (
                                 <div className="flex items-center gap-1 mt-2 text-red-400 text-sm">
                                     <TrendingDown size={16} />
-                                    <span>{difference} below optimal</span>
+                                    <span>{difference} {objective === 'minimize' ? 'more than optimal' : 'below optimal'}</span>
                                 </div>
                             )}
                             {greedyOptimal && (
