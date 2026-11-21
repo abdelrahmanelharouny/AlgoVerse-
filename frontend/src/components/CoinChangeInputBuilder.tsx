@@ -9,12 +9,14 @@ interface CoinChangeInputBuilderProps {
 const CoinChangeInputBuilder: React.FC<CoinChangeInputBuilderProps> = ({ onInputChange }) => {
     const [amount, setAmount] = useState(30);
     const [coins, setCoins] = useState<number[]>([1, 2, 5]);
+    const [coinInputError, setCoinInputError] = useState<string | null>(null);
 
     const onInputChangeRef = useRef(onInputChange);
     useEffect(() => { onInputChangeRef.current = onInputChange; }, [onInputChange]);
     useEffect(() => { onInputChangeRef.current(coins, amount); }, [coins, amount]);
 
     const addCoin = () => {
+        setCoinInputError(null);
         const newCoin = Math.max(...coins, 0) + 1;
         setCoins([...coins, newCoin].sort((a, b) => a - b));
     };
@@ -24,12 +26,19 @@ const CoinChangeInputBuilder: React.FC<CoinChangeInputBuilderProps> = ({ onInput
     };
 
     const updateCoin = (index: number, value: number) => {
+        const normalized = Math.max(1, value);
+        if (coins.some((coin, coinIndex) => coinIndex !== index && coin === normalized)) {
+            setCoinInputError(`Coin denomination ${normalized} already exists.`);
+            return;
+        }
+        setCoinInputError(null);
         const newCoins = [...coins];
-        newCoins[index] = Math.max(1, value);
+        newCoins[index] = normalized;
         setCoins(newCoins.sort((a, b) => a - b));
     };
 
     const generateRandom = () => {
+        setCoinInputError(null);
         const newAmount = Math.floor(Math.random() * 50) + 10;
         const numCoins = Math.floor(Math.random() * 4) + 2; // 2 to 5 coins
         const newCoins = Array.from({ length: numCoins }, () => Math.floor(Math.random() * 10) + 1);
@@ -78,6 +87,8 @@ const CoinChangeInputBuilder: React.FC<CoinChangeInputBuilderProps> = ({ onInput
                     <span>Denominations</span>
                     <span>{coins.length} coins</span>
                 </div>
+
+                {coinInputError && <p role="alert" className="text-xs text-rose-400">{coinInputError}</p>}
 
                 <div className="grid grid-cols-2 gap-3">
                     <AnimatePresence mode="popLayout">
