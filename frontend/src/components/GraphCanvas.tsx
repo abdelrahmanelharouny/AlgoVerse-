@@ -155,15 +155,37 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 );
                 const isActive = activeFrom === from && activeTo === to;
 
+                const hasReverseEdge = directed
+                    && Object.prototype.hasOwnProperty.call(graph[to] ?? {}, from);
+                let controlX = (start.x + end.x) / 2;
+                let controlY = (start.y + end.y) / 2;
+
+                if (hasReverseEdge) {
+                    // Use a canonical normal so opposite directed edges bend to
+                    // opposite sides even though their source/target order flips.
+                    const forward = from.localeCompare(to) < 0;
+                    const canonicalStart = forward ? start : end;
+                    const canonicalEnd = forward ? end : start;
+                    const canonicalDx = canonicalEnd.x - canonicalStart.x;
+                    const canonicalDy = canonicalEnd.y - canonicalStart.y;
+                    const canonicalLength = Math.max(1, Math.hypot(canonicalDx, canonicalDy));
+                    const offset = (forward ? 1 : -1) * Math.min(24, Math.max(12, canonicalLength * 0.12));
+                    controlX += (-canonicalDy / canonicalLength) * offset;
+                    controlY += (canonicalDx / canonicalLength) * offset;
+                }
+
                 ctx.beginPath();
                 ctx.moveTo(start.x, start.y);
-                ctx.lineTo(end.x, end.y);
+                if (hasReverseEdge) ctx.quadraticCurveTo(controlX, controlY, end.x, end.y);
+                else ctx.lineTo(end.x, end.y);
                 ctx.strokeStyle = isMst ? '#22c55e' : isPath ? '#38bdf8' : isActive ? '#f59e0b' : '#475569';
                 ctx.lineWidth = isMst || isPath ? 4 : isActive ? 3.5 : 2;
                 ctx.stroke();
 
                 if (directed) {
-                    const angle = Math.atan2(end.y - start.y, end.x - start.x);
+                    const tangentX = end.x - (hasReverseEdge ? controlX : start.x);
+                    const tangentY = end.y - (hasReverseEdge ? controlY : start.y);
+                    const angle = Math.atan2(tangentY, tangentX);
                     const nodeRadius = width < 460 ? 21 : 26;
                     const tipX = end.x - Math.cos(angle) * (nodeRadius + 2);
                     const tipY = end.y - Math.sin(angle) * (nodeRadius + 2);
@@ -177,8 +199,12 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     ctx.fill();
                 }
 
-                const midX = (start.x + end.x) / 2;
-                const midY = (start.y + end.y) / 2;
+                const midX = hasReverseEdge
+                    ? 0.25 * start.x + 0.5 * controlX + 0.25 * end.x
+                    : (start.x + end.x) / 2;
+                const midY = hasReverseEdge
+                    ? 0.25 * start.y + 0.5 * controlY + 0.25 * end.y
+                    : (start.y + end.y) / 2;
                 ctx.fillStyle = '#0f172a';
                 ctx.beginPath();
                 ctx.arc(midX, midY, 14, 0, Math.PI * 2);
