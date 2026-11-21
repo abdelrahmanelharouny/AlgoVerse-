@@ -2,7 +2,7 @@ from bisect import bisect_right
 from time import perf_counter
 from typing import List
 
-from from api.models import AlgorithmResult, IntervalSchedulingInput, Metrics, Step, StepType
+from api.models import AlgorithmResult, IntervalSchedulingInput, Metrics, Step, StepType
 
 
 def solve_interval_scheduling_greedy(data: IntervalSchedulingInput) -> AlgorithmResult:
