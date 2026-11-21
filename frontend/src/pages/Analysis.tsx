@@ -85,6 +85,7 @@ const Analysis = () => {
     const algo2 = algorithms.find(a => a.id === compareAlgos[1]);
 
     const currentDecisionNode = decisionTree.find(n => n.id === decisionPath[decisionPath.length - 1]);
+    const decisionAlgorithm = decisionResult ? algorithms.find(a => a.id === decisionResult) : undefined;
 
     const handleDecisionChoice = (option: { next: string | null; result?: string }) => {
         if (option.result) {
@@ -130,14 +131,20 @@ const Analysis = () => {
                     </div>
                 ) : (
                     <div className="bg-slate-800/50 rounded-lg p-6">
-                        <p className="text-emerald-400 text-lg font-semibold mb-2">✅ Recommended: {algorithms.find(a => a.id === decisionResult)?.name || decisionResult}</p>
-                        <p className="text-slate-300 mb-4">{algorithms.find(a => a.id === decisionResult)?.description}</p>
+                        <p className={`text-lg font-semibold mb-2 ${decisionAlgorithm ? 'text-emerald-400' : 'text-amber-300'}`}>
+                            {decisionAlgorithm ? 'Recommended' : 'Not implemented yet'}: {decisionAlgorithm?.name || (decisionResult || '').replaceAll('-', ' ')}
+                        </p>
+                        <p className="text-slate-300 mb-4">
+                            {decisionAlgorithm?.description || 'This algorithm is part of the learning roadmap, but an executable visualizer is not available in this version.'}
+                        </p>
                         <div className="flex gap-3">
-                            <Link to={`/visualizer/${decisionResult}`}>
-                                <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-semibold flex items-center gap-2">
-                                    <Play size={16} /> Visualize
-                                </button>
-                            </Link>
+                            {decisionAlgorithm && (
+                                <Link to={`/visualizer/${decisionResult}`}>
+                                    <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-semibold flex items-center gap-2">
+                                        <Play size={16} /> Visualize
+                                    </button>
+                                </Link>
+                            )}
                             <button onClick={resetDecision} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">Try Again</button>
                         </div>
                     </div>
