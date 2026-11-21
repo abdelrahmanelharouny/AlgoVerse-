@@ -108,7 +108,7 @@ export interface IntervalSchedulingInput {
 }
 
 export interface GreedyDecision {
-    itemId: number;
+    itemId: string | number;
     weight: number;
     value: number;
     ratio: number;
