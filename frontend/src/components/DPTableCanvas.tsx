@@ -146,11 +146,18 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
                 ctx.lineWidth = isActive ? 2.5 : 1;
                 ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
 
-                ctx.fillStyle = isActive ? '#f2ffd0' : value !== 0 ? '#e2eaf2' : '#8fa2b8';
-                ctx.font = isActive ? 'bold ' + Math.max(8, Math.round(cellSize * 0.34)) + 'px Inter, sans-serif' : Math.max(8, Math.round(cellSize * 0.3)) + 'px Inter, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(String(value), x + cellSize / 2, y + cellSize / 2);
+                if (cellSize >= 18) {
+                    ctx.fillStyle = isActive ? '#f2ffd0' : value !== 0 ? '#e2eaf2' : '#8fa2b8';
+                    ctx.font = isActive ? 'bold ' + Math.max(8, Math.round(cellSize * 0.34)) + 'px Inter, sans-serif' : Math.max(8, Math.round(cellSize * 0.3)) + 'px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+                    ctx.clip();
+                    ctx.fillText(String(value), x + cellSize / 2, y + cellSize / 2);
+                    ctx.restore();
+                }
             }
         }
 
@@ -168,7 +175,7 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
 
         // Draw a compact legend only when dependency information exists.
         if (dependencies.length > 0) {
-            ctx.fillStyle = '#83cbd8';
+            ctx.fillStyle = '#78b8ff';
             ctx.fillRect(PADDING, height - 12, 9, 9);
             ctx.fillStyle = '#a9b8c9';
             ctx.font = '9px Inter, sans-serif';
@@ -193,6 +200,13 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
                 aria-label={"Dynamic programming table with " + data.length + " rows. The active cell and its dependencies are highlighted."}
                 style={{ imageRendering: 'crisp-edges' }}
             />
+            {activeCell && data[activeCell.row]?.[activeCell.col] !== undefined && (
+                <div className="av-dp-caption" aria-live="polite">
+                    <span>Active state</span>
+                    <strong>{'DP[' + activeCell.row + ', ' + activeCell.col + '] = ' + data[activeCell.row][activeCell.col]}</strong>
+                    <span>Highlighted dependencies show the states used for this transition.</span>
+                </div>
+            )}
         </motion.div>
     );
 };
