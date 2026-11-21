@@ -77,7 +77,7 @@ const Problems = () => {
     const categories = useMemo(() => ['all', ...new Set(problems.map(p => p.category))], []);
 
     const filteredProblems = useMemo(() => {
-        let result = problems.filter(problem => {
+        const result = problems.filter(problem => {
             const matchesSearch = problem.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 problem.description.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesGreedy = greedyFilter === 'all' ||
