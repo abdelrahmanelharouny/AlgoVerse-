@@ -14,6 +14,7 @@ import DPTableCanvas from '../components/DPTableCanvas';
 import HuffmanCanvas from '../components/HuffmanCanvas';
 import GreedyChainCanvas from '../components/GreedyChainCanvas';
 import StepTimeline from '../components/StepTimeline';
+import StepInspector from '../components/StepInspector';
 import AlgorithmInfoPanel from '../components/AlgorithmInfoPanel';
 import VisualizerInputPresets from '../components/VisualizerInputPresets';
 import confetti from 'canvas-confetti';
@@ -22,6 +23,7 @@ import { SkipForward } from 'lucide-react';
 const Visualizer: React.FC = () => {
     const { algorithm } = useParams<{ algorithm: string }>();
     const [algoType, setAlgoType] = useState<AlgorithmType | null>(null);
+    const [unsupportedReason, setUnsupportedReason] = useState<string | null>(null);
     const [inputData, setInputData] = useState<any>(null);
     const [steps, setSteps] = useState<any[]>([]);
     const [speed, setSpeed] = useState(1);
@@ -150,6 +152,7 @@ const Visualizer: React.FC = () => {
 
         let type: AlgorithmType | null = null;
         let defaultInput: any = null;
+        setUnsupportedReason(null);
 
         switch (algorithm) {
             // Knapsack variants
@@ -159,7 +162,7 @@ const Visualizer: React.FC = () => {
                 defaultInput = { capacity: 50, items: [{ id: 1, weight: 10, value: 60 }, { id: 2, weight: 20, value: 100 }, { id: 3, weight: 30, value: 120 }] };
                 break;
             case 'fractional-knapsack':
-                type = AlgorithmType.GREEDY;
+                type = AlgorithmType.FRACTIONAL_KNAPSACK;
                 defaultInput = { capacity: 50, items: [{ id: 1, weight: 10, value: 60 }, { id: 2, weight: 20, value: 100 }, { id: 3, weight: 30, value: 120 }] };
                 break;
 
@@ -272,13 +275,15 @@ const Visualizer: React.FC = () => {
             case 'assignment-bitmask':
             case 'tree-dp-independent':
             case 'job-sequencing':
-                type = AlgorithmType.KNAPSACK; // Placeholder - not yet implemented
-                defaultInput = { capacity: 50, items: [{ id: 1, weight: 10, value: 60 }, { id: 2, weight: 20, value: 100 }] };
+                type = null;
+                defaultInput = null;
+                setUnsupportedReason(`${algorithm} is listed in the catalog but its executable algorithm is not implemented yet.`);
                 break;
 
             default:
-                type = AlgorithmType.KNAPSACK; // Fallback
-                defaultInput = { capacity: 10, items: [] };
+                type = null;
+                defaultInput = null;
+                setUnsupportedReason(`No executable visualizer is registered for "${algorithm}".`);
         }
 
         setAlgoType(type);
@@ -293,7 +298,9 @@ const Visualizer: React.FC = () => {
     const fetchSolution = async (type: AlgorithmType, input: any) => {
         try {
             let result;
-            if (type === AlgorithmType.LCS) {
+            if (type === AlgorithmType.FRACTIONAL_KNAPSACK) {
+                result = await api.solveFractionalKnapsack(input);
+            } else if (type === AlgorithmType.LCS) {
                 result = await api.solveLCS(input);
             } else if (type === AlgorithmType.DIJKSTRA) {
                 result = await api.solveDijkstra(input);
@@ -334,7 +341,7 @@ const Visualizer: React.FC = () => {
 
     // Render Canvas based on Algorithm
     const renderCanvas = () => {
-        if (!algoType) return null;
+        if (!algoType) return <div className="flex min-h-64 max-w-xl flex-col items-center justify-center gap-3 rounded-xl border border-amber-500/20 bg-slate-900/80 p-8 text-center text-slate-300"><span className="text-amber-300 font-semibold">Visualizer unavailable</span><p className="text-sm text-slate-400">{unsupportedReason || 'This algorithm has no registered implementation yet.'}</p></div>;
 
         switch (algoType) {
             case AlgorithmType.LCS:
@@ -386,6 +393,7 @@ const Visualizer: React.FC = () => {
                     allSteps={steps}
                 />;
             case AlgorithmType.INTERVAL_SCHEDULING:
+            case AlgorithmType.FRACTIONAL_KNAPSACK:
             case AlgorithmType.GREEDY:
             case AlgorithmType.KNAPSACK_GREEDY:
                 return <GreedyChainCanvas
@@ -510,25 +518,12 @@ const Visualizer: React.FC = () => {
                     {renderCanvas()}
                 </div>
 
-                {/* Step Description Overlay */}
-                <AnimatePresence mode="wait">
-                    {currentStep && (
-                        <motion.div
-                            key={currentStepIndex}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md border border-slate-700 px-6 py-4 rounded-2xl shadow-2xl max-w-2xl text-center z-20"
-                        >
-                            <span className="text-xs font-bold tracking-wider text-indigo-400 uppercase mb-1 block">
-                                Step {currentStepIndex + 1} / {steps.length}
-                            </span>
-                            <p className="text-lg text-slate-200 font-medium">
-                                {currentStep.description || "Processing..."}
-                            </p>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <StepInspector
+                    step={currentStep}
+                    stepIndex={currentStepIndex}
+                    totalSteps={steps.length}
+                    algorithmName={algorithm || ''}
+                />
             </div>
 
             {/* Right Panel: Code & Details */}

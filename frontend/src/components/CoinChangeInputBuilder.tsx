@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, RefreshCw, Coins } from 'lucide-react';
 
@@ -10,9 +10,9 @@ const CoinChangeInputBuilder: React.FC<CoinChangeInputBuilderProps> = ({ onInput
     const [amount, setAmount] = useState(30);
     const [coins, setCoins] = useState<number[]>([1, 2, 5]);
 
-    useEffect(() => {
-        onInputChange(coins, amount);
-    }, [coins, amount, onInputChange]);
+    const onInputChangeRef = useRef(onInputChange);
+    useEffect(() => { onInputChangeRef.current = onInputChange; }, [onInputChange]);
+    useEffect(() => { onInputChangeRef.current(coins, amount); }, [coins, amount]);
 
     const addCoin = () => {
         const newCoin = Math.max(...coins, 0) + 1;

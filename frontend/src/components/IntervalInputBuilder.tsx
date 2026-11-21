@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, RefreshCw, Calendar, Clock } from 'lucide-react';
 
@@ -27,9 +27,9 @@ const IntervalInputBuilder: React.FC<IntervalInputBuilderProps> = ({ onInputChan
         { id: '11', start: 12, end: 16 }
     ]);
 
-    useEffect(() => {
-        onInputChange(intervals);
-    }, [intervals, onInputChange]);
+    const onInputChangeRef = useRef(onInputChange);
+    useEffect(() => { onInputChangeRef.current = onInputChange; }, [onInputChange]);
+    useEffect(() => { onInputChangeRef.current(intervals); }, [intervals]);
 
     const addInterval = () => {
         const newId = (Math.max(...intervals.map(i => parseInt(i.id))) + 1).toString();

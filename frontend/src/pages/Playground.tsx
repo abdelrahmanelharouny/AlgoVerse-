@@ -438,7 +438,7 @@ const Playground = () => {
                                         />
 
                                         {/* Metrics Comparison */}
-                                        <PerformanceComparison results={comparisonResults} />
+                                        <PerformanceComparison results={comparisonResults} objective={selectedAlgorithm === 'coin-change' ? 'minimize' : 'maximize'} />
                                     </motion.div>
                                 ) : (
                                     <motion.div
