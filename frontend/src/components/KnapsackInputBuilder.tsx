@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, X, Shuffle, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,6 +20,10 @@ export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onIn
         { id: '3', weight: 30, value: 120 }
     ]);
 
+    const onInputChangeRef = useRef(onInputChange);
+    useEffect(() => { onInputChangeRef.current = onInputChange; }, [onInputChange]);
+    useEffect(() => { onInputChangeRef.current(items, capacity); }, [items, capacity]);
+
     const addItem = () => {
         const newItem: KnapsackItem = {
             id: Date.now().toString(),
@@ -28,7 +32,6 @@ export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onIn
         };
         const newItems = [...items, newItem];
         setItems(newItems);
-        onInputChange(newItems, capacity);
     };
 
     const removeItem = (id: string) => {
@@ -47,7 +50,6 @@ export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onIn
 
     const updateCapacity = (value: number) => {
         setCapacity(value);
-        onInputChange(items, value);
     };
 
     const randomizeItems = () => {
@@ -98,7 +100,6 @@ export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onIn
 
         setItems(newItems);
         setCapacity(newCapacity);
-        onInputChange(newItems, newCapacity);
     };
 
     return (

@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export interface ChallengeProgress {
     challengeId: string;
     completed: boolean;
     bestScore: number;
-    stars: number; // 0-3
+    stars: number;
     hintsUsed: number;
     attempts: number;
     completedAt?: string;
@@ -12,51 +12,70 @@ export interface ChallengeProgress {
 
 const STORAGE_KEY = 'daa-challenge-progress';
 
-export const useChallengeProgress = () => {
-    const [progress, setProgress] = useState<Map<string, ChallengeProgress>>(new Map());
+const emptyProgress = (): Map<string, ChallengeProgress> => new Map();
 
-    // Load progress from localStorage on mount
+export const useChallengeProgress = () => {
+    const [progress, setProgress] = useState<Map<string, ChallengeProgress>>(emptyProgress);
+    const [hydrated, setHydrated] = useState(false);
+
+    // Do not persist the initial empty state before localStorage hydration finishes.
     useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                setProgress(new Map(Object.entries(parsed)));
-            } catch (error) {
-                console.error('Failed to load challenge progress:', error);
+        try {
+            const stored = window.localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                const parsed: unknown = JSON.parse(stored);
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    const restored = new Map<string, ChallengeProgress>();
+                    for (const [id, value] of Object.entries(parsed)) {
+                        if (!value || typeof value !== 'object') continue;
+                        const item = value as Partial<ChallengeProgress>;
+                        restored.set(id, {
+                            challengeId: id,
+                            completed: Boolean(item.completed),
+                            bestScore: Number(item.bestScore) || 0,
+                            stars: Math.max(0, Math.min(3, Number(item.stars) || 0)),
+                            hintsUsed: Math.max(0, Number(item.hintsUsed) || 0),
+                            attempts: Math.max(0, Number(item.attempts) || 0),
+                            completedAt: item.completedAt
+                        });
+                    }
+                    setProgress(restored);
+                }
             }
+        } catch (error) {
+            console.error('Failed to load challenge progress:', error);
+        } finally {
+            setHydrated(true);
         }
     }, []);
 
-    // Save progress to localStorage whenever it changes
     useEffect(() => {
-        const obj = Object.fromEntries(progress);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
-    }, [progress]);
+        if (!hydrated) return;
+        try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(progress)));
+        } catch (error) {
+            console.error('Failed to save challenge progress:', error);
+        }
+    }, [progress, hydrated]);
 
-    const getChallengeProgress = (challengeId: string): ChallengeProgress | undefined => {
-        return progress.get(challengeId);
-    };
+    const getChallengeProgress = (challengeId: string): ChallengeProgress | undefined =>
+        progress.get(challengeId);
 
-    const isChallengeCompleted = (challengeId: string): boolean => {
-        return progress.get(challengeId)?.completed || false;
-    };
+    const isChallengeCompleted = (challengeId: string): boolean =>
+        progress.get(challengeId)?.completed ?? false;
 
-    const getCompletedChallenges = (): string[] => {
-        return Array.from(progress.entries())
-            .filter(([_, p]) => p.completed)
-            .map(([id, _]) => id);
-    };
+    const getCompletedChallenges = (): string[] =>
+        Array.from(progress.entries())
+            .filter(([, item]) => item.completed)
+            .map(([id]) => id);
 
-    const getTotalStars = (): number => {
-        return Array.from(progress.values())
-            .reduce((sum, p) => sum + (p.stars || 0), 0);
-    };
+    const getTotalStars = (): number =>
+        Array.from(progress.values()).reduce((sum, item) => sum + item.stars, 0);
 
     const recordAttempt = (challengeId: string) => {
-        setProgress(prev => {
-            const newProgress = new Map(prev);
-            const current = newProgress.get(challengeId) || {
+        setProgress(previous => {
+            const next = new Map(previous);
+            const current = next.get(challengeId) ?? {
                 challengeId,
                 completed: false,
                 bestScore: 0,
@@ -64,18 +83,15 @@ export const useChallengeProgress = () => {
                 hintsUsed: 0,
                 attempts: 0
             };
-            newProgress.set(challengeId, {
-                ...current,
-                attempts: current.attempts + 1
-            });
-            return newProgress;
+            next.set(challengeId, { ...current, attempts: current.attempts + 1 });
+            return next;
         });
     };
 
     const recordHintUsed = (challengeId: string) => {
-        setProgress(prev => {
-            const newProgress = new Map(prev);
-            const current = newProgress.get(challengeId) || {
+        setProgress(previous => {
+            const next = new Map(previous);
+            const current = next.get(challengeId) ?? {
                 challengeId,
                 completed: false,
                 bestScore: 0,
@@ -83,11 +99,8 @@ export const useChallengeProgress = () => {
                 hintsUsed: 0,
                 attempts: 0
             };
-            newProgress.set(challengeId, {
-                ...current,
-                hintsUsed: current.hintsUsed + 1
-            });
-            return newProgress;
+            next.set(challengeId, { ...current, hintsUsed: current.hintsUsed + 1 });
+            return next;
         });
     };
 
@@ -97,41 +110,42 @@ export const useChallengeProgress = () => {
         stars: number,
         hintsUsed: number
     ) => {
-        setProgress(prev => {
-            const newProgress = new Map(prev);
-            const current = newProgress.get(challengeId);
-
-            // Only update if this is a better score or first completion
-            if (!current || !current.completed || score > current.bestScore) {
-                newProgress.set(challengeId, {
-                    challengeId,
-                    completed: true,
-                    bestScore: score,
-                    stars: Math.max(stars, current?.stars || 0),
-                    hintsUsed: current?.hintsUsed || hintsUsed,
-                    attempts: (current?.attempts || 0) + 1,
-                    completedAt: new Date().toISOString()
-                });
-            }
-
-            return newProgress;
+        setProgress(previous => {
+            const next = new Map(previous);
+            const current = next.get(challengeId);
+            const bestScore = Math.max(score, current?.bestScore ?? 0);
+            next.set(challengeId, {
+                challengeId,
+                completed: true,
+                bestScore,
+                stars: Math.max(current?.stars ?? 0, Math.max(0, Math.min(3, stars))),
+                hintsUsed: Math.max(current?.hintsUsed ?? 0, hintsUsed),
+                attempts: current?.attempts ?? 0,
+                completedAt: current?.completedAt ?? new Date().toISOString()
+            });
+            return next;
         });
     };
 
     const resetProgress = () => {
-        setProgress(new Map());
-        localStorage.removeItem(STORAGE_KEY);
+        setProgress(emptyProgress());
+        try {
+            window.localStorage.removeItem(STORAGE_KEY);
+        } catch (error) {
+            console.error('Failed to clear challenge progress:', error);
+        }
     };
 
     const resetChallenge = (challengeId: string) => {
-        setProgress(prev => {
-            const newProgress = new Map(prev);
-            newProgress.delete(challengeId);
-            return newProgress;
+        setProgress(previous => {
+            const next = new Map(previous);
+            next.delete(challengeId);
+            return next;
         });
     };
 
     return {
+        hydrated,
         getChallengeProgress,
         isChallengeCompleted,
         getCompletedChallenges,

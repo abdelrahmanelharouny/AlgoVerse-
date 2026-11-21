@@ -45,7 +45,7 @@ export const CHALLENGES: Challenge[] = [
                         { id: '3', weight: 5, value: 6 }
                     ]
                 },
-                expectedValue: 10
+                expectedValue: 11
             }
         ],
         hints: [
@@ -53,7 +53,7 @@ export const CHALLENGES: Challenge[] = [
             'The greedy approach picks items by best ratio first.',
             'DP builds a table to find the truly optimal solution.'
         ],
-        optimalValue: 10,
+        optimalValue: 11,
         locked: false
     },
     {
@@ -101,7 +101,7 @@ export const CHALLENGES: Challenge[] = [
                         { id: '4', start: 6, end: 9 }
                     ]
                 },
-                expectedValue: 3
+                expectedValue: 2
             }
         ],
         hints: [
@@ -109,7 +109,7 @@ export const CHALLENGES: Challenge[] = [
             'Pick the interval that ends earliest and doesn\'t conflict.',
             'For interval scheduling, greedy is actually optimal!'
         ],
-        optimalValue: 3,
+        optimalValue: 2,
         locked: false
     },
 
@@ -149,7 +149,7 @@ export const CHALLENGES: Challenge[] = [
     {
         id: 'medium-coin-1',
         title: 'Large Denominations',
-        description: 'Make change for $30 with unusual denominations [1, 6, 7, 10]. Greedy won\'t work optimally here!',
+        description: 'Make change for $6 using [1, 3, 4]. Largest-first Greedy uses 3 coins, while the optimal solution uses 2.',
         difficulty: 'medium',
         algorithmType: 'coin-change',
         greedyType: AlgorithmType.COIN_CHANGE_GREEDY,
@@ -158,18 +158,18 @@ export const CHALLENGES: Challenge[] = [
             {
                 name: 'Unusual Denominations',
                 input: {
-                    amount: 30,
-                    coins: [1, 6, 7, 10]
+                    amount: 6,
+                    coins: [1, 3, 4]
                 },
-                expectedValue: 3
+                expectedValue: 2
             }
         ],
         hints: [
-            'Greedy would pick three 10s, which works but isn\'t always optimal.',
-            'Try combinations like 10 + 10 + 7 + 3×1.',
-            'DP builds the solution from smaller amounts.'
+            'Greedy chooses 4 first, then two 1 coins.',
+            'The optimal solution is 3 + 3.',
+            'DP explores the combinations of smaller amounts.'
         ],
-        optimalValue: 3,
+        optimalValue: 2,
         locked: false,
         prerequisite: 'easy-coin-1'
     },
@@ -240,7 +240,7 @@ export const CHALLENGES: Challenge[] = [
                         { id: '12', weight: 5, value: 24 }
                     ]
                 },
-                expectedValue: 235
+                expectedValue: 299
             }
         ],
         hints: [
@@ -248,14 +248,14 @@ export const CHALLENGES: Challenge[] = [
             'Greedy by ratio will give a good but not optimal solution.',
             'DP builds a 50×12 table to explore all possibilities systematically.'
         ],
-        optimalValue: 235,
+        optimalValue: 299,
         locked: false,
         prerequisite: 'medium-knapsack-1'
     },
     {
         id: 'hard-coin-1',
         title: 'Minimal Coins',
-        description: 'Make change for $99 using [1, 5, 10, 21, 25]. This tests the limits of both algorithms!',
+        description: 'Make change for $31 using [1, 5, 10, 21, 25]. Greedy uses 3 coins; the optimal solution uses 2.',
         difficulty: 'hard',
         algorithmType: 'coin-change',
         greedyType: AlgorithmType.COIN_CHANGE_GREEDY,
@@ -264,18 +264,18 @@ export const CHALLENGES: Challenge[] = [
             {
                 name: 'Large Amount',
                 input: {
-                    amount: 99,
+                    amount: 31,
                     coins: [1, 5, 10, 21, 25]
                 },
-                expectedValue: 5
+                expectedValue: 2
             }
         ],
         hints: [
-            'Greedy picks 3×25 + 2×10 + 4×1 = 9 coins.',
-            'But there\'s a better combination using the 21 coin!',
-            'Optimal: 3×25 + 2×10 + 1×4 or similar patterns = 5 coins.'
+            'Greedy picks 25, then 5, then 1.',
+            'Notice that the 21 coin combines with 10 to make exactly 31.',
+            'The optimal solution uses only two coins: 21 + 10.'
         ],
-        optimalValue: 5,
+        optimalValue: 2,
         locked: false,
         prerequisite: 'medium-coin-1'
     },
@@ -314,7 +314,7 @@ export const CHALLENGES: Challenge[] = [
                         { id: '20', start: 7, end: 11 }
                     ]
                 },
-                expectedValue: 6
+                expectedValue: 5
             }
         ],
         hints: [
@@ -322,7 +322,7 @@ export const CHALLENGES: Challenge[] = [
             'Sort by end time and apply the greedy rule carefully.',
             'Even with 20 intervals, greedy finds the optimal solution efficiently.'
         ],
-        optimalValue: 6,
+        optimalValue: 5,
         locked: false,
         prerequisite: 'medium-interval-1'
     },
@@ -359,7 +359,7 @@ export const CHALLENGES: Challenge[] = [
                         { id: '15', weight: 9, value: 18 }
                     ]
                 },
-                expectedValue: 280
+                expectedValue: 211
             }
         ],
         hints: [
@@ -367,14 +367,14 @@ export const CHALLENGES: Challenge[] = [
             'The greedy solution will be close but not perfect.',
             'Take your time and watch the DP table fill up systematically.'
         ],
-        optimalValue: 280,
+        optimalValue: 211,
         locked: false,
         prerequisite: 'hard-knapsack-1'
     },
     {
         id: 'bonus-coin-1',
         title: 'The Coin Master',
-        description: 'BONUS: Make change for $127 with [1, 3, 7, 13, 19]. Master level!',
+        description: 'BONUS: Make change for $40 using [1, 5, 12, 20, 25]. Largest-first Greedy is not optimal.',
         difficulty: 'hard',
         algorithmType: 'coin-change',
         greedyType: AlgorithmType.COIN_CHANGE_GREEDY,
@@ -383,18 +383,18 @@ export const CHALLENGES: Challenge[] = [
             {
                 name: 'Master Level',
                 input: {
-                    amount: 127,
-                    coins: [1, 3, 7, 13, 19]
+                    amount: 40,
+                    coins: [1, 5, 12, 20, 25]
                 },
-                expectedValue: 7
+                expectedValue: 2
             }
         ],
         hints: [
-            'Greedy picks 6×19 + 13×1 = 20 coins. Way off!',
-            'Look for patterns using the larger denominations.',
-            'Optimal uses combinations of 19, 13, and 7 efficiently.'
+            'Greedy chooses 25, then 12, then three 1 coins.',
+            'Look for a pair that sums exactly to 40.',
+            'The optimal solution is 20 + 20: just two coins.'
         ],
-        optimalValue: 7,
+        optimalValue: 2,
         locked: false,
         prerequisite: 'hard-coin-1'
     },
