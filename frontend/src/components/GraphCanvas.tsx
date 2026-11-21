@@ -1,8 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+interface GraphStepData {
+    current_node?: string;
+    checking_neighbor?: string;
+    start_node?: string;
+    visited?: string[];
+    distances?: Record<string, number | null>;
+    mst_edges?: Array<{ u: string; v: string; weight?: number }>;
+    path_edges?: Array<{ u: string; v: string }>;
+}
+
 interface GraphCanvasProps {
     graph: Record<string, Record<string, number>>;
-    currentStepData?: any;
+    currentStepData?: GraphStepData;
     visitedNodes?: string[];
     startNode?: string;
     directed?: boolean;
@@ -119,11 +129,11 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
         const activeFrom = currentStepData?.current_node;
         const activeTo = currentStepData?.checking_neighbor;
-        const mstEdges = (currentStepData?.mst_edges ?? []) as Array<{ u: string; v: string; weight?: number }>;
-        const pathEdges = (currentStepData?.path_edges ?? []) as Array<{ u: string; v: string }>;
+        const mstEdges = currentStepData?.mst_edges ?? [];
+        const pathEdges = currentStepData?.path_edges ?? [];
         const visited = new Set<string>([
             ...visitedNodes,
-            ...(Array.isArray(currentStepData?.visited) ? currentStepData.visited : [])
+            ...(currentStepData?.visited ?? [])
         ]);
         const drawnEdges = new Set<string>();
 
