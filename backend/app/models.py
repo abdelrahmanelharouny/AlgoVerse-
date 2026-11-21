@@ -51,7 +51,7 @@ class KnapsackItem(BaseModel):
 
 class KnapsackInput(BaseModel):
     capacity: int = Field(ge=0, le=1_000)
-    items: List[KnapsackItem] = Field(max_items=100)
+    items: List[KnapsackItem] = Field(max_length=100)
 
     @validator("items")
     def unique_item_ids(cls, items):
@@ -62,8 +62,8 @@ class KnapsackInput(BaseModel):
 
 
 class CoinChangeInput(BaseModel):
-    amount: int = Field(ge=0, le=10_000)
-    coins: List[int] = Field(min_items=1, max_items=100)
+    amount: int = Field(ge=0, le=2_000)
+    coins: List[int] = Field(min_length=1, max_length=100)
 
     @validator("coins")
     def positive_unique_coins(cls, coins):
@@ -88,11 +88,11 @@ class Interval(BaseModel):
 
 
 class IntervalSchedulingInput(BaseModel):
-    intervals: List[Interval] = Field(max_items=2_000)
+    intervals: List[Interval] = Field(max_length=2_000)
 
 
 class MatrixChainInput(BaseModel):
-    dimensions: List[int] = Field(min_items=2, max_items=16)
+    dimensions: List[int] = Field(min_length=2, max_length=16)
 
     @validator("dimensions")
     def positive_dimensions(cls, dimensions):
@@ -107,7 +107,7 @@ class HuffmanInput(BaseModel):
 
 class LCSInput(BaseModel):
     text1: str = Field(max_length=250)
-    text2: str = Field(max_length=2_000)
+    text2: str = Field(max_length=250)
 
 
 class DijkstraInput(BaseModel):
@@ -117,7 +117,7 @@ class DijkstraInput(BaseModel):
     @validator("graph")
     def valid_graph_references(cls, graph):
         if len(graph) > 100:
-            raise ValueError("Graph cannot contain more than 500 nodes")
+            raise ValueError("Graph cannot contain more than 100 nodes")
         nodes = set(graph)
         for source, neighbors in graph.items():
             for target, weight in neighbors.items():
@@ -129,12 +129,12 @@ class DijkstraInput(BaseModel):
 
 
 class EditDistanceInput(BaseModel):
-    text1: str = Field(max_length=2_000)
-    text2: str = Field(max_length=2_000)
+    text1: str = Field(max_length=250)
+    text2: str = Field(max_length=250)
 
 
 class LISInput(BaseModel):
-    sequence: List[float] = Field(max_length=10_000)
+    sequence: List[float] = Field(max_length=500)
 
 
 class RodCuttingInput(BaseModel):
