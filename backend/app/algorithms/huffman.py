@@ -50,17 +50,19 @@ def solve_huffman(data: HuffmanInput) -> AlgorithmResult:
     root = heap[0][2]
     codes: Dict[str, str] = {}
 
-    def assign_codes(node: HuffmanNode, prefix: str) -> None:
+    # Iterative traversal avoids Python recursion-depth failures for a
+    # highly skewed frequency distribution with many unique symbols.
+    stack = [(root, "")]
+    while stack:
+        node, prefix = stack.pop()
         if node.char is not None:
             # A one-symbol alphabet still needs a non-empty decodable code.
             codes[node.char] = prefix or "0"
-            return
-        if node.left is not None:
-            assign_codes(node.left, prefix + "0")
+            continue
         if node.right is not None:
-            assign_codes(node.right, prefix + "1")
-
-    assign_codes(root, "")
+            stack.append((node.right, prefix + "1"))
+        if node.left is not None:
+            stack.append((node.left, prefix + "0"))
     encoded_text = "".join(codes[char] for char in text)
     compressed_bits = len(encoded_text)
     original_bits = len(text.encode("utf-8")) * 8
