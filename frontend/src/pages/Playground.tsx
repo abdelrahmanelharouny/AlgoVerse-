@@ -125,22 +125,16 @@ const Playground = () => {
         setLoading(true);
         try {
             const type = getAlgorithmType(method);
-            let result;
-
-            if (selectedAlgorithm === 'knapsack') {
-                const input = {
+            const result = selectedAlgorithm === 'knapsack'
+                ? await api.solveKnapsack(type, {
                     capacity,
                     items: items.map(item => ({
                         id: item.id,
                         weight: item.weight,
                         value: item.value
                     }))
-                };
-                result = await api.solveKnapsack(type, input);
-            } else {
-                const input = { amount, coins };
-                result = await api.solveCoinChange(type, input);
-            }
+                })
+                : await api.solveCoinChange(type, { amount, coins });
 
             if (method === 'greedy') setGreedyResult(result);
             else setDpResult(result);
