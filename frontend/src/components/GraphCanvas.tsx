@@ -23,8 +23,16 @@ interface GraphCanvasProps {
 
 interface Position { x: number; y: number; }
 
-const edgeKey = (from: string, to: string) =>
-    [from, to].sort((left, right) => left.localeCompare(right)).join('\u0000');
+const edgeKey = (from: string, to: string, directed = false) =>
+    directed ? from + '\u0000' + to
+        : [from, to].sort((left, right) => left.localeCompare(right)).join('\u0000');
+
+const animateCanvasUpdate = (canvas: HTMLCanvasElement) => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (!reduceMotion && typeof canvas.animate === 'function') {
+        canvas.animate([{ opacity: 0.72 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
+    }
+};
 
 const calculateLayout = (
     graph: Record<string, Record<string, number>>,
@@ -35,51 +43,45 @@ const calculateLayout = (
     const positions: Record<string, Position> = {};
     if (nodes.length === 0) return positions;
 
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.max(64, Math.min(width, height) * (nodes.length > 12 ? .39 : .34));
-    nodes.forEach((node, index) => {
-        const angle = (2 * Math.PI * index) / nodes.length - Math.PI / 2;
-        positions[node] = {
-            x: centerX + radius * Math.cos(angle),
-            y: centerY + radius * Math.sin(angle)
-        };
+    const compact = width < 460;
+    const nodeRadius = nodes.length > 34 ? 11 : nodes.length > 22 ? 13 : nodes.length > 14 ? 16 : compact ? 20 : 24;
+    const maxRadius = Math.max(34, Math.min(width, height) / 2 - nodeRadius - 18);
+    const spacing = nodeRadius * 2 + (nodes.length > 22 ? 8 : 18);
+
+    if (nodes.length <= 8) {
+        const radius = maxRadius * 0.82;
+        nodes.forEach((node, index) => {
+            const angle = (2 * Math.PI * index) / nodes.length - Math.PI / 2;
+            positions[node] = { x: width / 2 + radius * Math.cos(angle), y: height / 2 + radius * Math.sin(angle) };
+        });
+        return positions;
+    }
+
+    // Concentric rings maintain separation on narrow screens and dense graphs.
+    const rings = [0.28, 0.52, 0.76, 0.98].map(fraction => {
+        const radius = maxRadius * fraction;
+        const capacity = Math.max(1, Math.floor((2 * Math.PI * radius) / spacing));
+        return { radius, capacity };
     });
 
-    // Stable, bounded relaxation: layout work happens only when the graph or viewport changes.
-    if (nodes.length <= 42) {
-        for (let iteration = 0; iteration < 18; iteration++) {
-            const forces: Record<string, Position> = Object.fromEntries(
-                nodes.map(node => [node, { x: 0, y: 0 }])
-            );
-            for (let left = 0; left < nodes.length; left++) {
-                for (let right = left + 1; right < nodes.length; right++) {
-                    const a = nodes[left];
-                    const b = nodes[right];
-                    const dx = positions[b].x - positions[a].x;
-                    const dy = positions[b].y - positions[a].y;
-                    const distance = Math.max(1, Math.hypot(dx, dy));
-                    const force = Math.min(4, 720 / (distance * distance));
-                    forces[a].x -= (dx / distance) * force;
-                    forces[a].y -= (dy / distance) * force;
-                    forces[b].x += (dx / distance) * force;
-                    forces[b].y += (dy / distance) * force;
-                }
-            }
-            nodes.forEach(node => {
-                Object.keys(graph[node] ?? {}).forEach(neighbor => {
-                    if (!positions[neighbor]) return;
-                    const dx = positions[neighbor].x - positions[node].x;
-                    const dy = positions[neighbor].y - positions[node].y;
-                    forces[node].x += dx * .0015;
-                    forces[node].y += dy * .0015;
-                });
-            });
-            const cooling = .55 * (1 - iteration / 24);
-            nodes.forEach(node => {
-                positions[node].x = Math.max(36, Math.min(width - 36, positions[node].x + forces[node].x * cooling));
-                positions[node].y = Math.max(36, Math.min(height - 36, positions[node].y + forces[node].y * cooling));
-            });
+    let cursor = 0;
+    for (const ring of rings) {
+        if (cursor >= nodes.length) break;
+        const count = Math.min(nodes.length - cursor, ring.capacity);
+        for (let index = 0; index < count; index++) {
+            const node = nodes[cursor + index];
+            const angle = (2 * Math.PI * index) / count - Math.PI / 2 + (cursor % 2 ? Math.PI / count : 0);
+            positions[node] = { x: width / 2 + ring.radius * Math.cos(angle), y: height / 2 + ring.radius * Math.sin(angle) };
+        }
+        cursor += count;
+    }
+
+    if (cursor < nodes.length) {
+        const remaining = nodes.length - cursor;
+        for (let index = 0; index < remaining; index++) {
+            const node = nodes[cursor + index];
+            const angle = (2 * Math.PI * index) / remaining - Math.PI / 2;
+            positions[node] = { x: width / 2 + maxRadius * Math.cos(angle), y: height / 2 + maxRadius * Math.sin(angle) };
         }
     }
     return positions;
@@ -128,7 +130,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     const pathEdges = currentStepData?.path_edges ?? accumulatedPathEdges;
     const distances = currentStepData?.distances ?? distanceLabels;
     const mstEdgeKeys = useMemo(() => new Set(mstEdges.map(edge => edgeKey(edge.u, edge.v))), [mstEdges]);
-    const pathEdgeKeys = useMemo(() => new Set(pathEdges.map(edge => edgeKey(edge.u, edge.v))), [pathEdges]);
+    const pathEdgeKeys = useMemo(() => new Set(pathEdges.map(edge => edgeKey(edge.u, edge.v, directed))), [pathEdges, directed]);
     const edgeCount = useMemo(() => directed
         ? Object.values(graph).reduce((total, neighbors) => total + Object.keys(neighbors).length, 0)
         : new Set(Object.entries(graph).flatMap(([from, neighbors]) =>
@@ -148,7 +150,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         canvas.style.height = 'auto';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = '#0d1510';
+        ctx.fillStyle = '#101c2d';
         ctx.fillRect(0, 0, width, height);
 
         const activeFrom = currentStepData?.current_node;
@@ -159,7 +161,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         ]);
         const drawnEdges = new Set<string>();
         const nodeCount = Object.keys(graph).length;
-        const nodeRadius = nodeCount > 22 ? 16 : nodeCount > 14 ? 19 : width < 460 ? 21 : 25;
+        const nodeRadius = nodeCount > 34 ? 11 : nodeCount > 22 ? 13 : nodeCount > 14 ? 16 : width < 460 ? 20 : 24;
         const edgeFontSize = nodeCount > 18 ? 10 : 11;
 
         Object.entries(graph).forEach(([from, neighbors]) => {
@@ -168,7 +170,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             Object.entries(neighbors).forEach(([to, weight]) => {
                 const end = nodePositions[to];
                 if (!end) return;
-                const key = edgeKey(from, to);
+                const key = edgeKey(from, to, directed);
                 if (!directed && drawnEdges.has(key)) return;
                 drawnEdges.add(key);
 
@@ -191,7 +193,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     controlY += (canonicalDx / canonicalLength) * offset;
                 }
 
-                const edgeColor = isMst ? '#d6f56a' : isPath ? '#83cbd8' : isActive ? '#ff8063' : '#53665a';
+                const edgeColor = isMst ? '#d5ef79' : isPath ? '#78b8ff' : isActive ? '#ed765f' : '#53677f';
                 ctx.beginPath();
                 ctx.moveTo(start.x, start.y);
                 if (hasReverseEdge) ctx.quadraticCurveTo(controlX, controlY, end.x, end.y);
@@ -220,14 +222,14 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
                 const midX = hasReverseEdge ? .25 * start.x + .5 * controlX + .25 * end.x : (start.x + end.x) / 2;
                 const midY = hasReverseEdge ? .25 * start.y + .5 * controlY + .25 * end.y : (start.y + end.y) / 2;
-                ctx.fillStyle = '#111b15';
+                ctx.fillStyle = '#142238';
                 ctx.beginPath();
                 ctx.arc(midX, midY, 12, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.strokeStyle = '#405247';
+                ctx.strokeStyle = '#425873';
                 ctx.lineWidth = 1;
                 ctx.stroke();
-                ctx.fillStyle = isMst ? '#d6f56a' : '#d6e0d6';
+                ctx.fillStyle = isMst ? '#d5ef79' : '#dce6f0';
                 ctx.font = '650 ' + edgeFontSize + 'px Inter, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -244,16 +246,16 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
             ctx.beginPath();
             ctx.arc(position.x, position.y, nodeRadius, 0, Math.PI * 2);
-            ctx.fillStyle = isCurrent ? '#ff8063'
-                : isChecking ? '#f6c56e'
-                    : isStart ? '#d6f56a'
-                        : isVisited ? '#245f59' : '#25352b';
+            ctx.fillStyle = isCurrent ? '#ed6247'
+                : isChecking ? '#f2b75c'
+                    : isStart ? '#d5ef79'
+                        : isVisited ? '#326ca2' : '#263a55';
             ctx.fill();
-            ctx.strokeStyle = isCurrent ? '#ffc0b1' : isChecking ? '#ffe0a0' : isStart ? '#efffb2' : isVisited ? '#83cbd8' : '#617467';
+            ctx.strokeStyle = isCurrent ? '#ffb7a8' : isChecking ? '#ffe0a0' : isStart ? '#efffb2' : isVisited ? '#8bc7ff' : '#536b87';
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            ctx.fillStyle = isStart ? '#19210f' : '#f1f4e9';
+            ctx.fillStyle = isStart ? '#18230f' : '#f1f5f8';
             ctx.font = '700 ' + (node.length > 2 ? Math.max(8, 12 - node.length * .45) : 13) + 'px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -262,30 +264,31 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             if (Object.prototype.hasOwnProperty.call(distances, node)) {
                 const distance = distances[node];
                 const label = distance === null || !Number.isFinite(distance) ? '∞' : String(distance);
-                ctx.fillStyle = '#a7b4a8';
+                ctx.fillStyle = '#a9b8c9';
                 ctx.font = '10px ui-monospace, monospace';
                 ctx.fillText('d=' + label, position.x, position.y + nodeRadius + 12);
             }
         });
 
         if (nodeCount === 0) {
-            ctx.fillStyle = '#99a99c';
+            ctx.fillStyle = '#b7c5d4';
             ctx.font = '13px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('Add graph nodes and edges to begin', width / 2, height / 2);
         }
+        animateCanvasUpdate(canvas);
     }, [graph, nodePositions, currentStepData, visitedNodes, width, height, directed, startNode, mstEdgeKeys, pathEdgeKeys, distances]);
 
     return (
-        <div ref={hostRef} className="relative w-full min-w-0 overflow-hidden rounded-xl border border-[#33453a] bg-[#0d1510]">
+        <div ref={hostRef} className="av-visual-canvas relative w-full min-w-0 overflow-hidden rounded-xl border border-[#344b67] bg-[#101c2d]">
             <canvas
                 ref={canvasRef}
                 className="block w-full"
                 role="img"
                 aria-label={'Graph visualization with ' + Object.keys(graph).length + ' nodes and ' + edgeCount + ' ' + (directed ? 'directed edges' : 'edges') + '. Active algorithm states are highlighted.'}
             />
-            <div className="absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1.5 rounded-md border border-[#35483b] bg-[#101a14]/95 px-3 py-2 text-[9px] text-[#c0cbbf] backdrop-blur-sm">
+            <div className="absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1.5 rounded-md border border-[#344b67] bg-[#17263a]/95 px-3 py-2 text-[9px] text-[#c6d2df] backdrop-blur-sm">
                 <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d6f56a]" />Start</span>
                 <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#ff8063]" />Current</span>
                 <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#83cbd8]" />Visited</span>
@@ -294,7 +297,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     ? <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#83cbd8]" />Shortest-path tree</span>
                     : <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d6f56a] ring-1 ring-[#d6f56a]/40" />Chosen edge</span>}
             </div>
-            <div className="absolute right-3 top-3 rounded-md border border-[#35483b] bg-[#101a14]/95 px-3 py-1.5 font-mono text-[9px] text-[#aab8ac] backdrop-blur-sm">
+            <div className="absolute right-3 top-3 rounded-md border border-[#344b67] bg-[#17263a]/95 px-3 py-1.5 font-mono text-[9px] text-[#b7c5d4] backdrop-blur-sm">
                 {Object.keys(graph).length} nodes / {edgeCount} edges
             </div>
         </div>

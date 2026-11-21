@@ -65,7 +65,7 @@ const StepInspector: React.FC<StepInspectorProps> = ({ step, stepIndex, totalSte
 
     if (!step) {
         return (
-            <div className="mx-4 mb-4 rounded-lg border border-[#33453a] bg-[#141d19] px-4 py-3 text-xs text-[#9aa79c]">
+            <div className="av-step-inspector av-step-inspector__empty">
                 Press Play or Next Step to inspect the algorithm’s decisions.
             </div>
         );
@@ -78,11 +78,11 @@ const StepInspector: React.FC<StepInspectorProps> = ({ step, stepIndex, totalSte
             key={stepIndex}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mx-4 mb-4 rounded-lg border border-[#33453a] bg-[#141d19] p-4 shadow-[0_10px_30px_rgba(0,0,0,.12)]"
+            className="av-step-inspector"
             aria-live="polite"
             aria-label={`Step ${stepIndex + 1} explanation`}
         >
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <div className="av-step-inspector__meta">
                 <div className="flex items-center gap-2">
                     <span className={`rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${tone}`}>
                         {step.type}
@@ -95,16 +95,16 @@ const StepInspector: React.FC<StepInspectorProps> = ({ step, stepIndex, totalSte
                     Decision inspector
                 </span>
             </div>
-            <p className="text-sm font-semibold leading-relaxed text-slate-100">
+            <p className="av-step-inspector__title">
                 {step.description || 'Processing algorithm state…'}
             </p>
-            <p className="mt-2 text-xs leading-relaxed text-slate-400">
+            <p className="av-step-inspector__explanation">
                 {explainStep(step, algorithmName)}
             </p>
             {detailItems.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="av-step-inspector__details">
                     {detailItems.map(([key, value]) => (
-                        <span key={key} className="rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1 text-[11px] text-slate-400">
+                        <span key={key} className="av-step-inspector__detail">
                             <span className="text-slate-500">{key.replaceAll('_', ' ')}:</span>{' '}
                             <strong className="font-mono font-medium text-slate-200">{String(value)}</strong>
                         </span>

@@ -754,6 +754,14 @@ const Visualizer: React.FC = () => {
                     />
                 </div>
 
+                <div className="av-stage__hintbar">
+                    <span className="av-stage__hintbar-label">Live visualization</span>
+                    <span>Follow each decision, then inspect the code and final state.</span>
+                    <span className="hidden sm:inline-flex items-center gap-1.5" aria-label="Keyboard shortcuts">
+                        <kbd>SPACE</kbd> Play <kbd>←</kbd><kbd>→</kbd> Step
+                    </span>
+                </div>
+
                 <div className="av-stage__canvas">
                     {isLoading ? (
                         <div className="av-stage__loading" role="status">

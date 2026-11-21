@@ -19,6 +19,13 @@ interface DPTableCanvasProps {
 
 const PADDING = 16;
 
+const animateCanvasUpdate = (canvas: HTMLCanvasElement) => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (!reduceMotion && typeof canvas.animate === 'function') {
+        canvas.animate([{ opacity: 0.76 }, { opacity: 1 }], { duration: 130, easing: 'ease-out' });
+    }
+};
+
 const readCell = (value: unknown): { row: number; col: number } | null => {
     if (!value || typeof value !== 'object') return null;
     const cell = value as Record<string, unknown>;
@@ -65,11 +72,11 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
 
-        ctx.fillStyle = '#0d1510';
+        ctx.fillStyle = '#101c2d';
         ctx.fillRect(0, 0, width, height);
 
         if (rows === 0 || cols === 0) {
-            ctx.fillStyle = '#9aa99c';
+            ctx.fillStyle = '#b7c5d4';
             ctx.font = '14px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -94,7 +101,7 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
         ctx.font = Math.max(8, Math.min(12, cellSize * 0.48)) + 'px Inter, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = '#a9b8c9';
         for (let col = 0; col < cols; col++) {
             const label = colLabels?.[col] ?? String(col);
             ctx.fillText(label, originX + col * cellSize + cellSize / 2, PADDING + headerHeight / 2);
@@ -109,9 +116,9 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
             if (cell.row < 0 || cell.row >= rows || cell.col < 0 || cell.col >= cols) continue;
             const x = originX + cell.col * cellSize;
             const y = originY + cell.row * cellSize;
-            ctx.fillStyle = 'rgba(131, 203, 216, 0.12)';
+            ctx.fillStyle = 'rgba(120, 184, 255, 0.14)';
             ctx.fillRect(x + 3, y + 3, cellSize - 6, cellSize - 6);
-            ctx.strokeStyle = '#83cbd8';
+            ctx.strokeStyle = '#78b8ff';
             ctx.lineWidth = 2;
             ctx.setLineDash([4, 3]);
             ctx.strokeRect(x + 3, y + 3, cellSize - 6, cellSize - 6);
@@ -126,14 +133,14 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
                 const isActive = active?.row === row && active?.col === col;
 
                 ctx.fillStyle = isActive
-                    ? 'rgba(214, 245, 106, 0.25)'
-                    : value !== 0 ? '#1c2b22' : '#111b15';
+                    ? 'rgba(213, 239, 121, 0.25)'
+                    : value !== 0 ? '#20344f' : '#17263a';
                 ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
-                ctx.strokeStyle = isActive ? '#d6f56a' : '#2f4035';
+                ctx.strokeStyle = isActive ? '#d5ef79' : '#344b67';
                 ctx.lineWidth = isActive ? 2.5 : 1;
                 ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
 
-                ctx.fillStyle = isActive ? '#f2ffd0' : value !== 0 ? '#d7e1d7' : '#77877a';
+                ctx.fillStyle = isActive ? '#f2ffd0' : value !== 0 ? '#e2eaf2' : '#8fa2b8';
                 ctx.font = isActive ? 'bold ' + Math.max(8, Math.round(cellSize * 0.34)) + 'px Inter, sans-serif' : Math.max(8, Math.round(cellSize * 0.3)) + 'px Inter, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -157,17 +164,18 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
         if (dependencies.length > 0) {
             ctx.fillStyle = '#83cbd8';
             ctx.fillRect(PADDING, height - 12, 9, 9);
-            ctx.fillStyle = '#94a3b8';
+            ctx.fillStyle = '#a9b8c9';
             ctx.font = '9px Inter, sans-serif';
             ctx.textAlign = 'left';
             ctx.fillText('Dependency cells', PADDING + 14, height - 7);
         }
+        animateCanvasUpdate(canvas);
     }, [data, highlightedCell, rowLabels, colLabels, currentStepData]);
 
     return (
         <motion.div
             ref={hostRef}
-            className="max-h-[68vh] max-w-full overflow-auto rounded-xl border border-[#33453a] bg-[#0d1510] p-3"
+            className="av-visual-canvas max-h-[68vh] max-w-full overflow-auto rounded-xl border border-[#344b67] bg-[#101c2d] p-3"
             initial={{ opacity: 0, scale: 0.985 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.18 }}

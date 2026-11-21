@@ -8,6 +8,13 @@ interface IntervalTimelineCanvasProps {
     activeIntervalId?: string | number;
 }
 
+const animateCanvasUpdate = (canvas: HTMLCanvasElement) => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (!reduceMotion && typeof canvas.animate === 'function') {
+        canvas.animate([{ opacity: 0.76 }, { opacity: 1 }], { duration: 140, easing: 'ease-out' });
+    }
+};
+
 const IntervalTimelineCanvas: React.FC<IntervalTimelineCanvasProps> = ({
     intervals,
     decisions,
@@ -68,7 +75,7 @@ const IntervalTimelineCanvas: React.FC<IntervalTimelineCanvasProps> = ({
         canvas.style.height = height + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = '#0d1510';
+        ctx.fillStyle = '#101c2d';
         ctx.fillRect(0, 0, width, height);
 
         if (orderedIntervals.length === 0) {
@@ -86,7 +93,7 @@ const IntervalTimelineCanvas: React.FC<IntervalTimelineCanvasProps> = ({
         const axisWidth = width - leftPadding - rightPadding;
         const xFor = (value: number) => leftPadding + ((value - minTime) / span) * axisWidth;
 
-        ctx.strokeStyle = '#415447';
+        ctx.strokeStyle = '#53677f';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(leftPadding, topPadding - 12);
@@ -100,12 +107,12 @@ const IntervalTimelineCanvas: React.FC<IntervalTimelineCanvasProps> = ({
         for (let tick = 0; tick <= tickCount; tick++) {
             const value = minTime + span * tick / tickCount;
             const x = xFor(value);
-            ctx.strokeStyle = '#34453a';
+            ctx.strokeStyle = '#344b67';
             ctx.beginPath();
             ctx.moveTo(x, topPadding - 16);
             ctx.lineTo(x, height - 34);
             ctx.stroke();
-            ctx.fillStyle = '#849488';
+            ctx.fillStyle = '#a9b8c9';
             ctx.fillText(Number(value.toFixed(2)).toString(), x, 8);
         }
 
@@ -121,57 +128,58 @@ const IntervalTimelineCanvas: React.FC<IntervalTimelineCanvasProps> = ({
             const x2 = xFor(interval.end);
             const rectWidth = Math.max(5, x2 - x1);
 
-            ctx.fillStyle = '#90a094';
+            ctx.fillStyle = '#b7c5d4';
             ctx.font = '10px ui-monospace, monospace';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
             ctx.fillText(String(interval.id), leftPadding - 12, y + blockHeight / 2);
 
-            ctx.strokeStyle = '#2f4035';
+            ctx.strokeStyle = '#344b67';
             ctx.beginPath();
             ctx.moveTo(leftPadding, y + blockHeight / 2);
             ctx.lineTo(width - rightPadding, y + blockHeight / 2);
             ctx.stroke();
 
-            ctx.fillStyle = isSelected ? 'rgba(214, 245, 106, .22)'
-                : isRejected ? 'rgba(255, 128, 99, .13)'
-                    : isActive ? 'rgba(255, 189, 99, .18)' : '#1b2920';
-            ctx.strokeStyle = isActive ? '#ffbd63'
-                : isSelected ? '#d6f56a'
-                    : isRejected ? '#a96859' : '#53675a';
+            ctx.fillStyle = isSelected ? 'rgba(213, 239, 121, .22)'
+                : isRejected ? 'rgba(237, 98, 71, .16)'
+                    : isActive ? 'rgba(242, 183, 92, .18)' : '#1b2920';
+            ctx.strokeStyle = isActive ? '#f2b75c'
+                : isSelected ? '#d5ef79'
+                    : isRejected ? '#ed765f' : '#53677f';
             ctx.lineWidth = isActive ? 2.8 : isSelected ? 2 : 1.2;
             ctx.beginPath();
             ctx.rect(x1, y, rectWidth, blockHeight);
             ctx.fill();
             ctx.stroke();
 
-            ctx.fillStyle = isSelected ? '#e6ff9d' : isRejected ? '#ff9b84' : isActive ? '#ffe0a0' : '#aab8ac';
+            ctx.fillStyle = isSelected ? '#e7f8ad' : isRejected ? '#ffad9d' : isActive ? '#ffe0a0' : '#c6d2df';
             ctx.font = '10px ui-monospace, monospace';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             if (rectWidth > 34) ctx.fillText(String(interval.start) + '–' + String(interval.end), x1 + rectWidth / 2, y + blockHeight / 2);
         });
 
-        ctx.fillStyle = '#d6f56a';
+        ctx.fillStyle = '#d5ef79';
         ctx.fillRect(leftPadding, height - 19, 8, 8);
-        ctx.fillStyle = '#9aa79c';
+        ctx.fillStyle = '#a9b8c9';
         ctx.font = '9px Inter, sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText('Selected', leftPadding + 13, height - 12);
-        ctx.fillStyle = '#ff8063';
+        ctx.fillStyle = '#ed6247';
         ctx.fillRect(leftPadding + 76, height - 19, 8, 8);
-        ctx.fillStyle = '#9aa79c';
+        ctx.fillStyle = '#a9b8c9';
         ctx.fillText('Rejected', leftPadding + 89, height - 12);
         ctx.fillStyle = '#ffbd63';
         ctx.fillRect(leftPadding + 155, height - 19, 8, 8);
-        ctx.fillStyle = '#9aa79c';
+        ctx.fillStyle = '#a9b8c9';
         ctx.fillText('Current', leftPadding + 168, height - 12);
+        animateCanvasUpdate(canvas);
     }, [orderedIntervals, statusById, activeIntervalId, hostWidth]);
 
     return (
         <motion.div
             ref={hostRef}
-            className="max-h-[68vh] max-w-full overflow-auto rounded-xl border border-[#33453a] bg-[#0d1510] p-3"
+            className="av-visual-canvas max-h-[68vh] max-w-full overflow-auto rounded-xl border border-[#344b67] bg-[#101c2d] p-3"
             initial={false}
             animate={{ opacity: 1 }}
         >

@@ -42,6 +42,13 @@ const TREE_GAP = 34;
 const Y_SPACING = 66;
 const TOP_PADDING = 54;
 
+const animateCanvasUpdate = (canvas: HTMLCanvasElement) => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (!reduceMotion && typeof canvas.animate === 'function') {
+        canvas.animate([{ opacity: 0.72 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
+    }
+};
+
 const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepIndex, allSteps }) => {
     const hostRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -133,7 +140,7 @@ const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepInde
             canvas.width = Math.round(canvas.width * dpr);
             canvas.height = Math.round(canvas.height * dpr);
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.fillStyle = '#0d1510';
+            ctx.fillStyle = '#101c2d';
             ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
             ctx.fillStyle = '#a1b0a3';
             ctx.font = '13px Inter, sans-serif';
@@ -186,7 +193,7 @@ const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepInde
         canvas.style.height = canvasHeight + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-        ctx.fillStyle = '#0d1510';
+        ctx.fillStyle = '#101c2d';
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
         const offsetX = Math.max(24, (canvasWidth - forestWidth) / 2);
@@ -227,10 +234,10 @@ const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepInde
                 ctx.beginPath();
                 ctx.moveTo(node.x, node.y + NODE_RADIUS - 2);
                 ctx.lineTo(child.x, child.y - NODE_RADIUS + 2);
-                ctx.strokeStyle = '#53665a';
+                ctx.strokeStyle = '#53677f';
                 ctx.lineWidth = 1.7;
                 ctx.stroke();
-                ctx.fillStyle = '#9aaa9d';
+                ctx.fillStyle = '#a9b8c9';
                 ctx.font = '10px ui-monospace, monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText(bit, (node.x + child.x) / 2 + side, (node.y + child.y) / 2);
@@ -241,33 +248,39 @@ const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepInde
 
         Object.values(nodes).forEach(node => {
             if (!positioned.has(String(node.id))) return;
-            const isSelected = currentStepData?.left_id === node.id || currentStepData?.right_id === node.id;
-            const isMerged = currentStepData?.new_node_id === node.id;
+            const selectedLeft = currentStepData?.left_id ?? currentStepData?.left_child_id;
+            const selectedRight = currentStepData?.right_id ?? currentStepData?.right_child_id;
+            const isSelected = [selectedLeft, selectedRight].some(
+                selectedId => selectedId !== undefined && String(selectedId) === String(node.id)
+            );
+            const isMerged = currentStepData?.new_node_id !== undefined
+                && String(currentStepData.new_node_id) === String(node.id);
             ctx.beginPath();
             ctx.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI * 2);
-            ctx.fillStyle = isMerged ? '#344d25' : isSelected ? '#5a3b24' : node.isLeaf ? '#1b3025' : '#202f25';
-            ctx.strokeStyle = isMerged ? '#d6f56a' : isSelected ? '#ffbd63' : node.isLeaf ? '#83cbd8' : '#6c806f';
+            ctx.fillStyle = isMerged ? '#314c2f' : isSelected ? '#68402f' : node.isLeaf ? '#243d5a' : '#22324a';
+            ctx.strokeStyle = isMerged ? '#d5ef79' : isSelected ? '#ffb66f' : node.isLeaf ? '#78b8ff' : '#607895';
             ctx.lineWidth = isMerged || isSelected ? 2.6 : 1.6;
             ctx.fill();
             ctx.stroke();
 
             const symbol = node.char === ' ' ? '␠' : node.char;
-            ctx.fillStyle = '#f1f4e9';
+            ctx.fillStyle = '#f1f5f8';
             ctx.font = '700 11px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(symbol || 'Σ', node.x, node.y, NODE_RADIUS * 1.65);
-            ctx.fillStyle = '#afbdaf';
+            ctx.fillStyle = '#a9b8c9';
             ctx.font = '9px ui-monospace, monospace';
             ctx.fillText(String(node.freq), node.x, node.y + NODE_RADIUS + 12);
         });
+        animateCanvasUpdate(canvas);
     }, [stepIndex, currentStepData, allSteps, viewportWidth]);
 
     const codes = currentStepData?.codes;
     const codeEntries = codes ? Object.entries(codes) : [];
 
     return (
-        <div ref={hostRef} className="max-h-[68vh] max-w-full overflow-auto rounded-xl border border-[#33453a] bg-[#0d1510] p-3">
+        <div ref={hostRef} className="av-visual-canvas max-h-[68vh] max-w-full overflow-auto rounded-xl border border-[#344b67] bg-[#101c2d] p-3">
             <canvas
                 ref={canvasRef}
                 className="mx-auto block"

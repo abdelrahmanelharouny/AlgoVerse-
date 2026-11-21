@@ -11,6 +11,13 @@ interface GreedyChainCanvasProps {
     amount?: number;
 }
 
+const animateCanvasUpdate = (canvas: HTMLCanvasElement) => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (!reduceMotion && typeof canvas.animate === 'function') {
+        canvas.animate([{ opacity: 0.76 }, { opacity: 1 }], { duration: 140, easing: 'ease-out' });
+    }
+};
+
 const CARD_WIDTH = 184;
 const CARD_HEIGHT = 132;
 const CARD_SPACING = 30;
@@ -43,7 +50,7 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
         canvas.style.height = height + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, totalWidth, height);
-        ctx.fillStyle = '#0d1510';
+        ctx.fillStyle = '#101c2d';
         ctx.fillRect(0, 0, totalWidth, height);
 
         const drawRoundedRect = (x: number, y: number, width: number, boxHeight: number, radius: number) => {
@@ -67,14 +74,14 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
             const x = xOffset;
             const y = 35;
             const accepted = decision.picked;
-            const statusColor = accepted ? '#d6f56a' : '#ff8063';
+            const statusColor = accepted ? '#d5ef79' : '#ed6247';
 
             ctx.fillStyle = isPast
-                ? (accepted ? '#203b2b' : '#3d2823')
+                ? (accepted ? '#2a4439' : '#4b302f')
                 : isActive
-                    ? (accepted ? '#304526' : '#4a2b25')
-                    : '#17231b';
-            ctx.strokeStyle = isActive ? statusColor : isPast ? (accepted ? '#7fae72' : '#b67564') : '#46594b';
+                    ? (accepted ? '#344d36' : '#593631')
+                    : '#22324a';
+            ctx.strokeStyle = isActive ? statusColor : isPast ? (accepted ? '#9fbd72' : '#b77769') : '#53677f';
             ctx.lineWidth = isActive ? 2.5 : 1.1;
             drawRoundedRect(x, y, CARD_WIDTH, CARD_HEIGHT, 10);
             ctx.fill();
@@ -85,11 +92,11 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
                 : 'Item ' + String(decision.itemId);
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
-            ctx.fillStyle = '#eef2e8';
+            ctx.fillStyle = '#f1f5f8';
             ctx.font = '700 14px Inter, sans-serif';
             ctx.fillText(itemLabel, x + 12, y + 12, 105);
 
-            ctx.fillStyle = accepted ? 'rgba(214, 245, 106, .14)' : 'rgba(255, 128, 99, .14)';
+            ctx.fillStyle = accepted ? 'rgba(213, 239, 121, .14)' : 'rgba(237, 98, 71, .15)';
             ctx.fillRect(x + CARD_WIDTH - 72, y + 10, 60, 20);
             ctx.fillStyle = accepted ? '#d6f56a' : '#ff9b84';
             ctx.font = '700 9px Inter, sans-serif';
@@ -97,7 +104,7 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
             ctx.fillText(accepted ? 'PICK' : 'REJECT', x + CARD_WIDTH - 42, y + 16);
 
             ctx.textAlign = 'left';
-            ctx.fillStyle = '#aab8ac';
+            ctx.fillStyle = '#a9b8c9';
             ctx.font = '11px ui-monospace, monospace';
 
             if (mode === 'coins') {
@@ -107,7 +114,7 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
                 ctx.fillText('Quantity       × ' + count, x + 12, y + 44);
                 ctx.fillText('Amount covered ' + (decision.cumulativeWeight ?? 0), x + 12, y + 64);
                 ctx.fillText('Coins used     ' + (decision.currentTotal ?? 0), x + 12, y + 84);
-                ctx.fillStyle = '#d6f56a';
+                ctx.fillStyle = '#d5ef79';
                 ctx.font = '700 11px ui-monospace, monospace';
                 ctx.fillText('Remaining      ' + remaining, x + 12, y + 107);
                 if (Number.isFinite(coin) && coin > amount) {
@@ -121,14 +128,14 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
                 ctx.fillText('Weight taken  ' + decision.weight.toFixed(2), x + 12, y + 64);
                 ctx.fillText('Value gained  ' + decision.value.toFixed(2), x + 12, y + 84);
                 ctx.fillText('Density       ' + (Number.isFinite(decision.ratio) ? decision.ratio.toFixed(2) : '∞'), x + 12, y + 104);
-                ctx.fillStyle = '#d6f56a';
+                ctx.fillStyle = '#d5ef79';
                 ctx.font = '700 10px ui-monospace, monospace';
                 ctx.fillText('Total value   ' + decision.currentTotal.toFixed(2), x + 12, y + 121, CARD_WIDTH - 24);
             } else {
                 ctx.fillText('Weight   ' + decision.weight, x + 12, y + 45);
                 ctx.fillText('Value     ' + decision.value, x + 12, y + 66);
                 ctx.fillText('Ratio     ' + (Number.isFinite(decision.ratio) ? decision.ratio.toFixed(2) : '∞'), x + 12, y + 87);
-                ctx.fillStyle = '#d6f56a';
+                ctx.fillStyle = '#d5ef79';
                 ctx.font = '700 10px ui-monospace, monospace';
                 ctx.fillText('Total value  ' + decision.currentTotal, x + 12, y + 111, CARD_WIDTH - 24);
             }
@@ -136,8 +143,8 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
             if (index < decisions.length - 1) {
                 const arrowX = xOffset + CARD_WIDTH + 5;
                 const arrowY = y + CARD_HEIGHT / 2;
-                ctx.strokeStyle = isPast ? '#829585' : '#405247';
-                ctx.fillStyle = isPast ? '#829585' : '#405247';
+                ctx.strokeStyle = isPast ? '#a9b8c9' : '#53677f';
+                ctx.fillStyle = isPast ? '#a9b8c9' : '#53677f';
                 ctx.lineWidth = 1.6;
                 ctx.beginPath();
                 ctx.moveTo(arrowX, arrowY);
@@ -153,6 +160,7 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
 
             xOffset += CARD_WIDTH + ARROW_LENGTH + CARD_SPACING;
         });
+        animateCanvasUpdate(canvas);
     }, [decisions, currentIndex, mode, amount]);
 
     if (decisions.length === 0) {
@@ -174,7 +182,7 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
 
     return (
         <motion.div
-            className="max-w-full overflow-x-auto rounded-xl border border-[#33453a] bg-[#0d1510] p-3"
+            className="av-visual-canvas max-w-full overflow-x-auto rounded-xl border border-[#344b67] bg-[#101c2d] p-3"
             initial={false}
             animate={{ opacity: 1 }}
             transition={{ duration: .18 }}
