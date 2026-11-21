@@ -275,7 +275,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             ctx.textBaseline = 'middle';
             ctx.fillText('Add graph nodes and edges to begin', width / 2, height / 2);
         }
-    }, [graph, nodePositions, currentStepData, visitedNodes, width, height, directed, startNode, mstEdgeKeys, pathEdgeKeys]);
+    }, [graph, nodePositions, currentStepData, visitedNodes, width, height, directed, startNode, mstEdgeKeys, pathEdgeKeys, distances]);
 
     return (
         <div ref={hostRef} className="relative w-full min-w-0 overflow-hidden rounded-xl border border-[#33453a] bg-[#0d1510]">
