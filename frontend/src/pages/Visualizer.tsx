@@ -7,6 +7,7 @@ import { useAlgorithmState } from '../hooks/useAlgorithmState';
 import useSound from '../hooks/useSound';
 import { api } from '../utils/api';
 import { AlgorithmType } from '../types';
+import type { AlgorithmResult } from '../types';
 import CodeExport from '../components/CodeExport';
 import PredictionModal from '../components/PredictionModal';
 import GraphCanvas from '../components/GraphCanvas';
@@ -15,6 +16,7 @@ import HuffmanCanvas from '../components/HuffmanCanvas';
 import GreedyChainCanvas from '../components/GreedyChainCanvas';
 import StepTimeline from '../components/StepTimeline';
 import StepInspector from '../components/StepInspector';
+import AlgorithmResultPanel from '../components/AlgorithmResultPanel';
 import AlgorithmInfoPanel from '../components/AlgorithmInfoPanel';
 import VisualizerInputPresets from '../components/VisualizerInputPresets';
 import confetti from 'canvas-confetti';
@@ -28,6 +30,7 @@ const Visualizer: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [inputData, setInputData] = useState<any>(null);
     const [steps, setSteps] = useState<any[]>([]);
+    const [algorithmResult, setAlgorithmResult] = useState<AlgorithmResult | null>(null);
     const [speed, setSpeed] = useState(1);
     const [showCode, setShowCode] = useState(true);
     const [soundEnabled, setSoundEnabled] = useState(true);
@@ -171,6 +174,7 @@ const Visualizer: React.FC = () => {
         if (!algorithm) return;
         setLoadError(null);
         setSteps([]);
+        setAlgorithmResult(null);
         setIsLoading(false);
 
         let type: AlgorithmType | null = null;
@@ -322,6 +326,7 @@ const Visualizer: React.FC = () => {
         setIsLoading(true);
         setLoadError(null);
         setSteps([]);
+        setAlgorithmResult(null);
         try {
             let result;
             if (type === AlgorithmType.FRACTIONAL_KNAPSACK) {
@@ -360,6 +365,7 @@ const Visualizer: React.FC = () => {
                 throw new Error("No executable solver is registered for this algorithm.");
             }
             setSteps(result.steps);
+            setAlgorithmResult(result);
             setCurrentStepIndex(-1);
             setHasCompleted(false);
         } catch (error) {
@@ -569,6 +575,7 @@ const Visualizer: React.FC = () => {
                     totalSteps={steps.length}
                     algorithmName={algorithm || ''}
                 />
+                <AlgorithmResultPanel result={algorithmResult} algorithmName={algorithm || ''} />
             </div>
 
             {/* Right Panel: Code & Details */}
