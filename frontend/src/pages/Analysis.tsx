@@ -27,7 +27,7 @@ const algorithms: AlgorithmData[] = [
     { id: 'edit-distance', name: 'Edit Distance', category: 'DP', timeComplexity: 'O(m × n)', spaceComplexity: 'O(m × n)', greedyWorks: false, bestCase: 'O(m × n)', avgCase: 'O(m × n)', worstCase: 'O(m × n)', description: 'Min edits to transform string' },
     { id: 'lis', name: 'Longest Increasing Subsequence', category: 'DP', timeComplexity: 'O(n²)', spaceComplexity: 'O(n)', greedyWorks: false, bestCase: 'O(n²)', avgCase: 'O(n²)', worstCase: 'O(n²)', description: 'Longest increasing subsequence' },
     { id: 'activity-selection', name: 'Activity Selection', category: 'Greedy', timeComplexity: 'O(n log n)', spaceComplexity: 'O(n)', greedyWorks: true, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n log n)', description: 'Max non-overlapping activities' },
-    { id: 'huffman', name: 'Huffman Coding', category: 'Greedy', timeComplexity: 'O(n + k log k)', spaceComplexity: 'O(n + k)', greedyWorks: true, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n log n)', description: 'Optimal prefix codes' },
+    { id: 'huffman', name: 'Huffman Coding', category: 'Greedy', timeComplexity: 'O(n + k log k + B)', spaceComplexity: 'O(k + B)', greedyWorks: true, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n log n)', description: 'Optimal prefix codes' },
     { id: 'matrix-chain', name: 'Matrix Chain Multiplication', category: 'DP', timeComplexity: 'O(n³)', spaceComplexity: 'O(n²)', greedyWorks: false, bestCase: 'O(n²)', avgCase: 'O(n³)', worstCase: 'O(n³)', description: 'Optimal matrix multiplication order' },
 ];
 
