@@ -22,24 +22,45 @@ const algorithmInfo: Record<string, {
     keyInsight: string;
     type: 'greedy' | 'dp' | 'graph';
 }> = {
+    'fractional-knapsack': {
+        description: "Maximize value when an item may be split and partially packed.",
+        timeComplexity: 'O(n log n)',
+        spaceComplexity: 'O(n)',
+        keyInsight: 'Sort by value density, then take each item fully or take the remaining fraction.',
+        type: 'greedy'
+    },
+    'knapsack': {
+        description: "Select whole items to maximize total value without exceeding capacity.",
+        timeComplexity: 'O(n × W)',
+        spaceComplexity: 'O(n × W)',
+        keyInsight: 'Each DP state compares excluding the current item with including it once.',
+        type: 'dp'
+    },
+    'interval-scheduling': {
+        description: "Select the largest set of mutually compatible intervals.",
+        timeComplexity: 'O(n log n)',
+        spaceComplexity: 'O(n)',
+        keyInsight: 'Sort by finish time and accept the next interval that starts after the previous one ends.',
+        type: 'greedy'
+    },
     'dijkstra': {
         description: "Finds shortest paths from a source vertex to all other vertices in a weighted graph.",
         timeComplexity: 'O((V + E) log V)',
-        spaceComplexity: 'O(V)',
+        spaceComplexity: 'O(V + E)',
         keyInsight: 'Always process the minimum distance vertex first - greedy choice leads to optimal solution.',
         type: 'graph'
     },
     'prims': {
         description: "Builds a Minimum Spanning Tree by greedily adding the cheapest edge that expands the tree.",
         timeComplexity: 'O(E log V)',
-        spaceComplexity: 'O(V)',
+        spaceComplexity: 'O(V + E)',
         keyInsight: 'Grow the tree by always picking the minimum weight edge connecting tree to non-tree vertices.',
         type: 'graph'
     },
     'kruskals': {
         description: "Builds MST by sorting all edges and adding them if they don't create a cycle (using Union-Find).",
         timeComplexity: 'O(E log E)',
-        spaceComplexity: 'O(V)',
+        spaceComplexity: 'O(V + E)',
         keyInsight: 'Union-Find enables O(α(n)) near-constant time cycle detection.',
         type: 'graph'
     },
@@ -94,9 +115,9 @@ const algorithmInfo: Record<string, {
     },
     'lis': {
         description: "Find longest subsequence where elements are in strictly increasing order.",
-        timeComplexity: 'O(n log n)',
+        timeComplexity: 'O(n²)',
         spaceComplexity: 'O(n)',
-        keyInsight: 'Binary search to find position for each element in auxiliary array.',
+        keyInsight: 'For each position, compare all earlier values and extend the best increasing subsequence ending there.',
         type: 'dp'
     },
     'rod-cutting': {
