@@ -46,7 +46,7 @@ def solve_prims(data: DijkstraInput) -> AlgorithmResult:
             for neighbor, next_weight in adjacency[target].items():
                 if neighbor not in visited:
                     heapq.heappush(queue, (next_weight, target, neighbor))
-                    steps.append(Step(type=StepType.HIGHLIGHT, description=f"Add candidate edge {target} — {neighbor} to the priority queue", data={"current_node": target, "checking_neighbor": neighbor, "edge_weight": next_weight}))
+                    steps.append(Step(type=StepType.HIGHLIGHT, description=f"Add candidate edge {target} — {neighbor} to the priority queue", data={"current_node": target, "checking_neighbor": neighbor, "edge_weight": next_weight, "visited": sorted(visited)}))
 
     component_count = len(nodes) - len(mst_edges)
     is_spanning_tree = component_count == 1
