@@ -58,7 +58,6 @@ export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onIn
             value: Math.floor(Math.random() * 150) + 10
         }));
         setItems(newItems);
-        onInputChange(newItems, capacity);
     };
 
     const loadPreset = (preset: 'easy' | 'medium' | 'hard') => {
