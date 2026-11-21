@@ -1,4 +1,6 @@
-from fastapi import FastAPI, HTTPException, Request
+import os
+
+from fastapi import FastAPI, HTTPException, Request, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy, solve_fractional_knapsack
@@ -26,13 +28,23 @@ async def handle_algorithm_input_error(request: Request, exc: ValueError):
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
+def _allowed_origins() -> list[str]:
+    configured = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+    return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_allowed_origins(),
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Accept", "Content-Type"],
 )
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 
 @app.get("/")
 def read_root():
