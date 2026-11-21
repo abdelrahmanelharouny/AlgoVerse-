@@ -8,8 +8,8 @@ import useSound from '../hooks/useSound';
 import { api } from '../utils/api';
 import { AlgorithmType } from '../types';
 import type {
-    AlgorithmResult, Step, KnapsackInput, CoinChangeInput, DijkstraInput,
-    HuffmanInput, IntervalSchedulingInput, LCSInput, MatrixChainInput
+    AlgorithmResult, Step, KnapsackItem, CoinChangeInput, DijkstraInput,
+    HuffmanInput, LCSInput, MatrixChainInput
 } from '../types';
 import CodeExport from '../components/CodeExport';
 import PredictionModal from '../components/PredictionModal';
@@ -25,16 +25,22 @@ import VisualizerInputPresets from '../components/VisualizerInputPresets';
 import confetti from 'canvas-confetti';
 import { SkipForward } from 'lucide-react';
 
-type AlgorithmInput =
-    | KnapsackInput
-    | CoinChangeInput
-    | DijkstraInput
-    | HuffmanInput
-    | IntervalSchedulingInput
-    | LCSInput
-    | MatrixChainInput
-    | { sequence: number[] }
-    | { length: number; prices: number[] };
+interface AlgorithmInput {
+    capacity?: number;
+    items?: KnapsackItem[];
+    amount?: number;
+    coins?: number[];
+    graph?: Record<string, Record<string, number>>;
+    start_node?: string;
+    text?: string;
+    text1?: string;
+    text2?: string;
+    dimensions?: number[];
+    sequence?: number[];
+    length?: number;
+    prices?: number[];
+    intervals?: Array<{ id: string | number; start: number; end: number }>;
+}
 
 const Visualizer: React.FC = () => {
     const { algorithm } = useParams<{ algorithm: string }>();
@@ -86,7 +92,7 @@ const Visualizer: React.FC = () => {
     // Use the algorithm state hook to accumulate DP table and greedy decisions
     const algorithmState = useAlgorithmState(steps, currentStepIndex);
 
-    const generatePrediction = (_currentStep: any, nextStep: any) => {
+    const generatePrediction = (_currentStep: Step, nextStep?: Step) => {
         const optionByType: Record<string, string> = {
             init: "Initialize State",
             sort: "Sort Candidates",
@@ -411,7 +417,7 @@ const Visualizer: React.FC = () => {
                     data={algorithmState.dpTable}
                     highlightedCell={algorithmState.highlightedCell}
                     currentStepData={currentStep?.data}
-                    rowLabels={['0', ...(inputData?.items?.map((_: any, i: number) => `Item ${i + 1}`) || [])]}
+                    rowLabels={['0', ...(inputData?.items?.map((_, i) => `Item ${i + 1}`) || [])]}
                     colLabels={Array.from({ length: (inputData?.capacity || 0) + 1 }, (_, i) => i.toString())}
                 />;
             case AlgorithmType.COIN_CHANGE_DP:
@@ -438,7 +444,7 @@ const Visualizer: React.FC = () => {
                 return <GraphCanvas
                     graph={inputData?.graph || {}}
                     currentStepData={currentStep?.data || {}}
-                    visitedNodes={(currentStep?.data as any)?.visited || []}
+                    visitedNodes={(currentStep?.data as { visited?: string[] } | undefined)?.visited || []}
                     startNode={inputData?.start_node}
                     directed={algoType === AlgorithmType.DIJKSTRA}
                 />;
