@@ -34,13 +34,13 @@ const SplitScreenVisualizer: React.FC<SplitScreenVisualizerProps> = ({
     const dpStep = dpResult.steps[dpStepIndex];
 
     useEffect(() => {
-        if (isPlaying && currentStep < maxSteps - 1) {
-            timerRef.current = setTimeout(() => {
-                setCurrentStep(prev => prev + 1);
-            }, 1000 / speed);
-        } else if (currentStep >= maxSteps - 1) {
-            setIsPlaying(false);
-        }
+        if (!isPlaying || maxSteps === 0 || currentStep >= maxSteps - 1) return;
+
+        const nextIndex = currentStep + 1;
+        timerRef.current = setTimeout(() => {
+            setCurrentStep(nextIndex);
+            if (nextIndex >= maxSteps - 1) setIsPlaying(false);
+        }, 1000 / speed);
 
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
