@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { StepType } from '../types';
 import type { Step, GreedyDecision } from '../types';
 
@@ -9,8 +9,8 @@ export interface AlgorithmState {
     tableConfig: { rows: number; cols: number };
 }
 
-interface MutableAlgorithmState extends AlgorithmState {}
-interface Checkpoint { index: number; state: MutableAlgorithmState; }
+type MutableAlgorithmState = AlgorithmState;
+type StateCheckpoint = { index: number; state: MutableAlgorithmState };
 
 const MAX_CHECKPOINTS = 64;
 const SNAPSHOT_CELL_BUDGET = 250_000;
@@ -39,8 +39,13 @@ const asCell = (value: unknown): { row: number; col: number } | null => {
     return row !== null && col !== null ? { row, col } : null;
 };
 
+const asNumberArray = (value: unknown): number[] | null => {
+    if (!Array.isArray(value)) return null;
+    return value.map(item => typeof item === 'number' ? item : Number(item) || 0);
+};
+
 const applyStep = (state: MutableAlgorithmState, step: Step) => {
-    const data = (step.data ?? {}) as Record<string, any>;
+    const data = (step.data ?? {}) as Record<string, unknown>;
 
     if (step.type === StepType.INIT) {
         if (typeof data.rows === 'number' && typeof data.cols === 'number') {
@@ -48,14 +53,21 @@ const applyStep = (state: MutableAlgorithmState, step: Step) => {
             const cols = Math.max(0, data.cols);
             state.tableConfig = { rows, cols };
             state.dpTable = Array.from({ length: rows }, () => Array<number>(cols).fill(0));
-            if (Array.isArray(data.initial_table)) {
-                state.dpTable = data.initial_table.map((row: unknown[]) => row.map(value => Number(value) || 0));
-                state.tableConfig = { rows: state.dpTable.length, cols: Math.max(0, ...state.dpTable.map(row => row.length)) };
+
+            const initialTable = Array.isArray(data.initial_table)
+                ? data.initial_table.map(row => asNumberArray(row) ?? [])
+                : null;
+            if (initialTable) {
+                state.dpTable = initialTable;
+                state.tableConfig = {
+                    rows: initialTable.length,
+                    cols: Math.max(0, ...initialTable.map(row => row.length))
+                };
             }
 
-            // Some one-dimensional DP algorithms expose their initial row.
-            if (Array.isArray(data.dp) && state.dpTable.length > 0) {
-                state.dpTable[0] = [...data.dp];
+            const initialRow = asNumberArray(data.dp);
+            if (initialRow && state.dpTable.length > 0) {
+                state.dpTable[0] = initialRow;
             }
         }
         return;
@@ -70,12 +82,12 @@ const applyStep = (state: MutableAlgorithmState, step: Step) => {
     }
 
     if (step.type === StepType.UPDATE) {
-        // 1-D DP implementations publish a full row snapshot for efficient replay.
-        if (Array.isArray(data.dp_array)) {
+        const dpArray = asNumberArray(data.dp_array);
+        if (dpArray) {
             if (state.dpTable.length === 0) state.dpTable = [[], []];
             if (state.dpTable.length === 1) state.dpTable.push([]);
-            state.dpTable[1] = [...data.dp_array];
-            state.tableConfig = { rows: 2, cols: data.dp_array.length };
+            state.dpTable[1] = dpArray;
+            state.tableConfig = { rows: 2, cols: dpArray.length };
             return;
         }
 
@@ -98,8 +110,10 @@ const applyStep = (state: MutableAlgorithmState, step: Step) => {
     }
 
     if (step.type === StepType.PICK || step.type === StepType.REJECT) {
+        const rawId = data.item_id ?? data.itemId ?? data.coin ?? -1;
+        const itemId = typeof rawId === 'string' || typeof rawId === 'number' ? rawId : -1;
         const decision: GreedyDecision = {
-            itemId: Number(data.item_id ?? data.itemId ?? data.coin ?? -1),
+            itemId,
             weight: Number(data.weight ?? data.current_weight ?? 0),
             value: Number(data.value ?? data.total_value ?? 0),
             ratio: Number(data.ratio ?? 0),
@@ -110,53 +124,54 @@ const applyStep = (state: MutableAlgorithmState, step: Step) => {
     }
 };
 
+const getCheckpointInterval = (steps: Step[]): number => {
+    const initStep = steps.find(step =>
+        step.type === StepType.INIT
+        && typeof step.data?.rows === 'number'
+        && typeof step.data?.cols === 'number'
+    );
+    const rows = initStep && typeof initStep.data.rows === 'number' ? initStep.data.rows : 1;
+    const cols = initStep && typeof initStep.data.cols === 'number' ? initStep.data.cols : 1;
+    const tableCellCount = Math.max(1, rows * cols);
+    const checkpointBudget = Math.max(2, Math.min(
+        MAX_CHECKPOINTS,
+        Math.floor(SNAPSHOT_CELL_BUDGET / tableCellCount)
+    ));
+    return Math.max(64, Math.ceil(Math.max(1, steps.length) / checkpointBudget));
+};
+
 export const useAlgorithmState = (steps: Step[], currentStepIndex: number): AlgorithmState => {
-    const cacheRef = useRef<{ source: Step[]; index: number; state: MutableAlgorithmState; checkpoints: Map<number, MutableAlgorithmState> } | null>(null);
+    // Build immutable checkpoints once per timeline; each render then replays only
+    // the short tail from the nearest checkpoint to the requested step.
+    const checkpoints = useMemo(() => {
+        const interval = getCheckpointInterval(steps);
+        const state = emptyState();
+        const result: StateCheckpoint[] = [{ index: -1, state: cloneState(state) }];
 
+        for (let index = 0; index < steps.length; index++) {
+            applyStep(state, steps[index]);
+            if ((index + 1) % interval === 0) {
+                result.push({ index, state: cloneState(state) });
+            }
+        }
+        return result;
+    }, [steps]);
+
+    const targetIndex = Math.min(currentStepIndex, steps.length - 1);
     return useMemo(() => {
-        let cache = cacheRef.current;
-        if (!cache || cache.source !== steps) {
-            const initial = emptyState();
-            cache = {
-                source: steps,
-                index: -1,
-                state: initial,
-                checkpoints: new Map<number, MutableAlgorithmState>([[-1, cloneState(initial)]])
-            };
+        if (targetIndex < 0 || steps.length === 0) return emptyState();
+
+        let checkpoint = checkpoints[0];
+        for (const candidate of checkpoints) {
+            if (candidate.index <= targetIndex && candidate.index > checkpoint.index) {
+                checkpoint = candidate;
+            }
         }
 
-        const targetIndex = Math.min(currentStepIndex, steps.length - 1);
-        const initStep = steps.find(step => step.type === StepType.INIT && typeof step.data?.rows === 'number' && typeof step.data?.cols === 'number');
-        const tableCellCount = initStep ? Math.max(1, initStep.data.rows * initStep.data.cols) : 1;
-        const checkpointBudget = Math.max(2, Math.min(MAX_CHECKPOINTS, Math.floor(SNAPSHOT_CELL_BUDGET / tableCellCount)));
-        const checkpointInterval = Math.max(64, Math.ceil(Math.max(1, steps.length) / checkpointBudget));
-        if (targetIndex < -1 || steps.length === 0) {
-            cache.index = -1;
-            cache.state = emptyState();
-        } else if (targetIndex >= cache.index) {
-            // Normal playback: apply only the newly reached events.
-            for (let index = cache.index + 1; index <= targetIndex; index++) {
-                applyStep(cache.state, steps[index]);
-                if ((index + 1) % checkpointInterval === 0) {
-                    cache.checkpoints.set(index, cloneState(cache.state));
-                }
-            }
-            cache.index = targetIndex;
-        } else {
-            // Reverse seeking: restore the nearest checkpoint, then replay a short tail.
-            let checkpointIndex = -1;
-            for (const index of cache.checkpoints.keys()) {
-                if (index <= targetIndex && index > checkpointIndex) checkpointIndex = index;
-            }
-            const snapshot = cache.checkpoints.get(checkpointIndex) ?? emptyState();
-            cache.state = cloneState(snapshot);
-            for (let index = checkpointIndex + 1; index <= targetIndex; index++) {
-                applyStep(cache.state, steps[index]);
-            }
-            cache.index = targetIndex;
+        const state = cloneState(checkpoint.state);
+        for (let index = checkpoint.index + 1; index <= targetIndex; index++) {
+            applyStep(state, steps[index]);
         }
-
-        cacheRef.current = cache;
-        return cloneState(cache.state);
-    }, [steps, currentStepIndex]);
+        return state;
+    }, [steps, targetIndex, checkpoints]);
 };
