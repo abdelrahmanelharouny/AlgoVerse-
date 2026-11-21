@@ -74,6 +74,9 @@ def test_dijkstra_returns_paths_and_rejects_negative_weights():
     result = solve_dijkstra(data)
     assert result.result_data["distances"]["D"] == 4
     assert result.result_data["paths"]["D"] == ["A", "C", "B", "D"]
+    edge_checks = [step for step in result.steps if step.type.value == "highlight" and "checking_neighbor" in step.data]
+    assert edge_checks
+    assert all("visited" in step.data for step in edge_checks)
 
 
 def test_prim_and_kruskal_return_same_forest_weight_on_disconnected_graph():
@@ -84,6 +87,8 @@ def test_prim_and_kruskal_return_same_forest_weight_on_disconnected_graph():
     assert prim.result_value == kruskal.result_value == 5
     assert prim.result_data["components_count"] == kruskal.result_data["components_count"] == 2
     assert not prim.result_data["is_spanning_tree"]
+    prim_edge_checks = [step for step in prim.steps if step.type.value == "highlight" and "checking_neighbor" in step.data]
+    assert all("visited" in step.data for step in prim_edge_checks)
 
 
 
