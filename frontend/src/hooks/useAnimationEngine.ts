@@ -7,51 +7,34 @@ interface UseAnimationEngineProps {
     onStepChange?: (index: number, step: Step) => void;
 }
 
+interface PlaybackState {
+    timeline: Step[];
+    index: number;
+    playing: boolean;
+}
+
 /**
- * Playback controller for algorithm timelines.
- * State transitions are committed outside React state updater callbacks so
- * step listeners never run twice under StrictMode's updater replays.
+ * Deterministic timeline controller. The active timeline is stored with playback
+ * state, so replacing a result resets the visible position without synchronously
+ * setting React state from an effect.
  */
 export const useAnimationEngine = ({ steps, speed, onStepChange }: UseAnimationEngineProps) => {
-    const [currentStepIndex, setCurrentStepIndex] = useState(-1);
-    const [isPlaying, setIsPlaying] = useState(false);
+    const [playback, setPlayback] = useState<PlaybackState>(() => ({
+        timeline: steps,
+        index: -1,
+        playing: false
+    }));
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const callbackRef = useRef(onStepChange);
-    const stepsRef = useRef(steps);
-    const indexRef = useRef(-1);
-
-    useEffect(() => { callbackRef.current = onStepChange; }, [onStepChange]);
 
     useEffect(() => {
-        if (stepsRef.current !== steps) {
-            stepsRef.current = steps;
-            indexRef.current = -1;
-            setIsPlaying(false);
-            setCurrentStepIndex(-1);
-        }
-    }, [steps]);
+        callbackRef.current = onStepChange;
+    }, [onStepChange]);
 
-    useEffect(() => { indexRef.current = currentStepIndex; }, [currentStepIndex]);
-
-    const clearTimer = useCallback(() => {
-        if (timerRef.current !== null) {
-            clearTimeout(timerRef.current);
-            timerRef.current = null;
-        }
-    }, []);
-
-    const commitIndex = useCallback((index: number, notify = false) => {
-        const timeline = stepsRef.current;
-        const safeIndex = timeline.length === 0
-            ? -1
-            : Math.max(-1, Math.min(index, timeline.length - 1));
-        indexRef.current = safeIndex;
-        setCurrentStepIndex(safeIndex);
-        if (notify && safeIndex >= 0) {
-            const step = timeline[safeIndex];
-            if (step) callbackRef.current?.(safeIndex, step);
-        }
-    }, []);
+    const sameTimeline = playback.timeline === steps;
+    const currentStepIndex = sameTimeline ? playback.index : -1;
+    const isPlaying = sameTimeline && playback.playing
+        && steps.length > 0 && currentStepIndex < steps.length - 1;
 
     const currentStep = currentStepIndex >= 0 && currentStepIndex < steps.length
         ? steps[currentStepIndex]
@@ -61,55 +44,67 @@ export const useAnimationEngine = ({ steps, speed, onStepChange }: UseAnimationE
         ? Math.max(0, Math.min(100, ((currentStepIndex + 1) / steps.length) * 100))
         : 0;
 
+    const clearTimer = useCallback(() => {
+        if (timerRef.current !== null) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    }, []);
+
+    const commitIndex = useCallback((index: number, playing = false, notify = false) => {
+        const safeIndex = steps.length === 0
+            ? -1
+            : Math.max(-1, Math.min(index, steps.length - 1));
+        setPlayback({ timeline: steps, index: safeIndex, playing });
+        if (notify && safeIndex >= 0) {
+            const step = steps[safeIndex];
+            if (step) callbackRef.current?.(safeIndex, step);
+        }
+    }, [steps]);
+
     useEffect(() => {
         clearTimer();
-        if (!isPlaying || steps.length === 0) {
-            if (steps.length === 0) setIsPlaying(false);
-            return;
-        }
-        if (currentStepIndex >= steps.length - 1) {
-            setIsPlaying(false);
-            return;
-        }
+        if (!isPlaying) return;
+
         const safeSpeed = Number.isFinite(speed) && speed > 0 ? speed : 1;
         timerRef.current = setTimeout(() => {
-            const nextIndex = Math.min(indexRef.current + 1, stepsRef.current.length - 1);
-            commitIndex(nextIndex, true);
+            const nextIndex = Math.min(currentStepIndex + 1, steps.length - 1);
+            const keepPlaying = nextIndex < steps.length - 1;
+            setPlayback({ timeline: steps, index: nextIndex, playing: keepPlaying });
+            const step = steps[nextIndex];
+            if (step) callbackRef.current?.(nextIndex, step);
         }, 1000 / safeSpeed);
+
         return clearTimer;
-    }, [isPlaying, currentStepIndex, steps.length, speed, clearTimer, commitIndex]);
+    }, [isPlaying, currentStepIndex, steps, speed, clearTimer]);
 
     useEffect(() => clearTimer, [clearTimer]);
 
     const togglePlay = useCallback(() => {
-        if (stepsRef.current.length === 0) return;
+        if (steps.length === 0) return;
         if (isPlaying) {
-            setIsPlaying(false);
+            commitIndex(currentStepIndex, false);
             return;
         }
-        if (indexRef.current >= stepsRef.current.length - 1) commitIndex(-1);
-        setIsPlaying(true);
-    }, [isPlaying, commitIndex]);
+        const startIndex = currentStepIndex >= steps.length - 1 ? -1 : currentStepIndex;
+        commitIndex(startIndex, true);
+    }, [steps.length, isPlaying, currentStepIndex, commitIndex]);
 
     const nextStep = useCallback(() => {
-        setIsPlaying(false);
-        commitIndex(indexRef.current + 1, true);
-    }, [commitIndex]);
+        commitIndex(currentStepIndex + 1, false, true);
+    }, [currentStepIndex, commitIndex]);
 
     const prevStep = useCallback(() => {
-        setIsPlaying(false);
-        commitIndex(indexRef.current - 1, true);
-    }, [commitIndex]);
+        commitIndex(currentStepIndex - 1, false, true);
+    }, [currentStepIndex, commitIndex]);
 
     const reset = useCallback(() => {
         clearTimer();
-        setIsPlaying(false);
-        commitIndex(-1);
+        commitIndex(-1, false);
     }, [clearTimer, commitIndex]);
 
     const seekToStep = useCallback((index: number) => {
-        setIsPlaying(false);
-        commitIndex(index, true);
+        commitIndex(index, false, true);
     }, [commitIndex]);
 
     return {
