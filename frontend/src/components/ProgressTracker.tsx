@@ -16,14 +16,6 @@ interface AlgorithmProgress {
     bestScore?: number;
 }
 
-interface ProgressStats {
-    totalAlgorithms: number;
-    completed: number;
-    streak: number;
-    lastSession: string;
-    totalTime: number;
-}
-
 const STORAGE_KEY = 'algoverse_progress';
 
 const defaultAlgorithms: AlgorithmProgress[] = [
@@ -55,20 +47,11 @@ const ProgressTracker: React.FC = () => {
         return defaultAlgorithms;
     });
 
-    const [stats, setStats] = useState<ProgressStats>({
-        totalAlgorithms: defaultAlgorithms.length,
-        completed: 0,
-        streak: 0,
-        lastSession: new Date().toISOString(),
-        totalTime: 0
-    });
 
-    // Save to localStorage
+
+    // Save progress after user-driven changes; all displayed counts are derived.
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(algorithms));
-
-        const completed = algorithms.filter(a => a.completed).length;
-        setStats(prev => ({ ...prev, completed }));
     }, [algorithms]);
 
     const toggleCompletion = (id: string) => {
@@ -84,7 +67,10 @@ const ProgressTracker: React.FC = () => {
         }
     };
 
-    const completionPercentage = Math.round((stats.completed / stats.totalAlgorithms) * 100);
+    const completedCount = algorithms.filter(algorithm => algorithm.completed).length;
+    const completionPercentage = Math.round((completedCount / defaultAlgorithms.length) * 100);
+    const streak = 0;
+    const totalTime = 0;
 
     const categories = [...new Set(algorithms.map(a => a.category))];
 
@@ -115,7 +101,7 @@ const ProgressTracker: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-slate-800/50 rounded-xl p-4 text-center">
                         <Target className="mx-auto text-emerald-400 mb-2" size={24} />
-                        <div className="text-2xl font-bold text-white">{stats.completed}/{stats.totalAlgorithms}</div>
+                        <div className="text-2xl font-bold text-white">{completedCount}/{defaultAlgorithms.length}</div>
                         <div className="text-xs text-slate-500">Completed</div>
                     </div>
                     <div className="bg-slate-800/50 rounded-xl p-4 text-center">
@@ -125,12 +111,12 @@ const ProgressTracker: React.FC = () => {
                     </div>
                     <div className="bg-slate-800/50 rounded-xl p-4 text-center">
                         <Flame className="mx-auto text-orange-400 mb-2" size={24} />
-                        <div className="text-2xl font-bold text-white">{stats.streak}</div>
+                        <div className="text-2xl font-bold text-white">{streak}</div>
                         <div className="text-xs text-slate-500">Day Streak</div>
                     </div>
                     <div className="bg-slate-800/50 rounded-xl p-4 text-center">
                         <Clock className="mx-auto text-purple-400 mb-2" size={24} />
-                        <div className="text-2xl font-bold text-white">{Math.floor(stats.totalTime / 60)}m</div>
+                        <div className="text-2xl font-bold text-white">{Math.floor(totalTime / 60)}m</div>
                         <div className="text-xs text-slate-500">Total Time</div>
                     </div>
                 </div>
