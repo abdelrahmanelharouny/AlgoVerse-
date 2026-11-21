@@ -1,17 +1,11 @@
 import React from 'react';
+import type { Step } from '../types';
 import { Clock, HardDrive, Info, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AlgorithmInfoPanelProps {
-    algorithmName: string;
-    algorithmId: string;
-    currentStep?: {
-        type: string;
-        description: string;
-        data?: any;
-    };
-    stepIndex: number;
-    totalSteps: number;
+    algorithm: string;
+    currentStep?: Step;
 }
 
 // Algorithm metadata
