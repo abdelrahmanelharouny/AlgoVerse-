@@ -4,11 +4,12 @@ import { Plus, Trash2, RefreshCw, Coins } from 'lucide-react';
 
 interface CoinChangeInputBuilderProps {
     onInputChange: (coins: number[], amount: number) => void;
+    initialData?: { coins: number[]; amount: number };
 }
 
-const CoinChangeInputBuilder: React.FC<CoinChangeInputBuilderProps> = ({ onInputChange }) => {
-    const [amount, setAmount] = useState(30);
-    const [coins, setCoins] = useState<number[]>([1, 2, 5]);
+const CoinChangeInputBuilder: React.FC<CoinChangeInputBuilderProps> = ({ onInputChange, initialData }) => {
+    const [amount, setAmount] = useState(initialData?.amount ?? 30);
+    const [coins, setCoins] = useState<number[]>(() => [...(initialData?.coins ?? [1, 2, 5])].sort((a, b) => a - b));
     const [coinInputError, setCoinInputError] = useState<string | null>(null);
 
     const onInputChangeRef = useRef(onInputChange);
