@@ -17,9 +17,9 @@ interface AlgorithmData {
 }
 
 const algorithms: AlgorithmData[] = [
-    { id: 'dijkstra', name: "Dijkstra's Algorithm", category: 'Graph', timeComplexity: 'O((V+E) log V)', spaceComplexity: 'O(V + E)', greedyWorks: true, bestCase: 'O(V)', avgCase: 'O((V+E) log V)', worstCase: 'O(V²)', description: 'Shortest path with non-negative weights' },
+    { id: 'dijkstra', name: "Dijkstra's Algorithm", category: 'Graph', timeComplexity: 'O((V+E) log V)', spaceComplexity: 'O(V + E)', greedyWorks: true, bestCase: 'O((V+E) log V)', avgCase: 'O((V+E) log V)', worstCase: 'O((V+E) log V)', description: 'Shortest path with non-negative weights' },
     { id: 'prims', name: "Prim's MST", category: 'Graph', timeComplexity: 'O(E log V)', spaceComplexity: 'O(V + E)', greedyWorks: true, bestCase: 'O(V)', avgCase: 'O(E log V)', worstCase: 'O(V²)', description: 'Minimum Spanning Tree' },
-    { id: 'kruskals', name: "Kruskal's MST", category: 'Graph', timeComplexity: 'O(E log E)', spaceComplexity: 'O(V + E)', greedyWorks: true, bestCase: 'O(E)', avgCase: 'O(E log E)', worstCase: 'O(E log E)', description: 'MST using Union-Find' },
+    { id: 'kruskals', name: "Kruskal's MST", category: 'Graph', timeComplexity: 'O(E log E)', spaceComplexity: 'O(V + E)', greedyWorks: true, bestCase: 'O(E log E)', avgCase: 'O(E log E)', worstCase: 'O(E log E)', description: 'MST using Union-Find' },
     { id: '0-1-knapsack', name: '0/1 Knapsack', category: 'DP', timeComplexity: 'O(n × W)', spaceComplexity: 'O(n × W)', greedyWorks: false, bestCase: 'O(n × W)', avgCase: 'O(n × W)', worstCase: 'O(n × W)', description: 'Item selection with weight constraint' },
     { id: 'fractional-knapsack', name: 'Fractional Knapsack', category: 'Greedy', timeComplexity: 'O(n log n)', spaceComplexity: 'O(n)', greedyWorks: true, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n log n)', description: 'Item selection, fractional allowed' },
     { id: 'lcs', name: 'Longest Common Subsequence', category: 'DP', timeComplexity: 'O(m × n)', spaceComplexity: 'O(m × n)', greedyWorks: false, bestCase: 'O(m × n)', avgCase: 'O(m × n)', worstCase: 'O(m × n)', description: 'Find LCS of two strings' },
