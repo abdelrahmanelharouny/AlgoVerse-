@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from mangum import Mangum
 
 # Import algorithm modules from api folder
@@ -22,6 +23,11 @@ from api.models import (
 )
 
 app = FastAPI(title="Algorithm Visualizer API")
+
+@app.exception_handler(ValueError)
+async def handle_algorithm_input_error(request: Request, exc: ValueError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
 
 app.add_middleware(
     CORSMiddleware,
