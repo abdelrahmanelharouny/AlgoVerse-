@@ -1,9 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
+interface DPTableStepData {
+    cell?: unknown;
+    active_cell?: unknown;
+    i?: number;
+    j?: number;
+    highlight_prev?: unknown;
+}
+
 interface DPTableCanvasProps {
     data: number[][];
-    currentStepData?: any;
+    currentStepData?: DPTableStepData;
     highlightedCell?: { row: number; col: number } | null;
     rowLabels?: string[];
     colLabels?: string[];
