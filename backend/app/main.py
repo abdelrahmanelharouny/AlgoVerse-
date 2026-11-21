@@ -1,6 +1,6 @@
 import os
 
-from fastapi import FastAPI, HTTPException, Request, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy, solve_fractional_knapsack
