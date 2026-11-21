@@ -1,7 +1,7 @@
 from time import perf_counter
 from typing import List
 
-from from api.models import AlgorithmResult, LCSInput, Metrics, Step, StepType
+from api.models import AlgorithmResult, LCSInput, Metrics, Step, StepType
 
 
 def solve_lcs_dp(data: LCSInput) -> AlgorithmResult:
