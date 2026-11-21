@@ -33,7 +33,7 @@ const IntervalInputBuilder: React.FC<IntervalInputBuilderProps> = ({ onInputChan
     useEffect(() => { onInputChangeRef.current(intervals); }, [intervals]);
 
     const addInterval = () => {
-        const newId = (Math.max(...intervals.map(i => parseInt(i.id))) + 1).toString();
+        const newId = (Math.max(0, ...intervals.map(i => Number.parseInt(i.id, 10)).filter(Number.isFinite)) + 1).toString();
         const start = Math.floor(Math.random() * 10);
         const end = start + Math.floor(Math.random() * 5) + 1;
         setIntervals([...intervals, { id: newId, start, end }]);
@@ -44,11 +44,10 @@ const IntervalInputBuilder: React.FC<IntervalInputBuilderProps> = ({ onInputChan
     };
 
     const updateInterval = (id: string, field: 'start' | 'end', value: number) => {
-        setIntervals(intervals.map(i => {
-            if (i.id === id) {
-                return { ...i, [field]: value };
-            }
-            return i;
+        setIntervals(intervals.map(interval => {
+            if (interval.id !== id) return interval;
+            if (field === 'start') return { ...interval, start: value, end: Math.max(value, interval.end) };
+            return { ...interval, end: Math.max(interval.start, value) };
         }));
     };
 
