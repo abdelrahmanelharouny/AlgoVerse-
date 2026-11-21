@@ -1,7 +1,7 @@
 from api.algorithms.coin_change import solve_coin_change_dp, solve_coin_change_greedy
 from api.algorithms.dijkstra import solve_dijkstra
 from api.algorithms.huffman import solve_huffman
-from api.algorithms.interval_scheduling import solve_interval_scheduling_greedy
+from api.algorithms.interval_scheduling import solve_interval_scheduling_dp, solve_interval_scheduling_greedy
 from api.algorithms.kruskals import solve_kruskals
 from api.algorithms.knapsack import solve_fractional_knapsack, solve_knapsack_dp, solve_knapsack_greedy
 from api.algorithms.lis import solve_lis_dp
@@ -113,3 +113,17 @@ def test_mst_rejects_conflicting_undirected_edge_weights():
     data = DijkstraInput(graph=graph, start_node="A")
     with pytest.raises(ValueError, match="Conflicting weights"):
         solve_kruskals(data)
+
+
+
+def test_interval_scheduling_dp_reconstructs_selected_intervals_with_linear_state():
+    data = IntervalSchedulingInput(intervals=[
+        Interval(id="a", start=-10, end=-5),
+        Interval(id="b", start=-5, end=0),
+        Interval(id="c", start=-8, end=-4),
+        Interval(id="d", start=0, end=2),
+    ])
+    result = solve_interval_scheduling_dp(data)
+    assert result.result_value == 3
+    assert result.selected_items == ["a", "b", "d"]
+    assert result.result_data["selected_intervals"] == ["a", "b", "d"]
