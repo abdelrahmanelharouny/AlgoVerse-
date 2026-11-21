@@ -3,18 +3,19 @@ import { Plus, X, Shuffle, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface KnapsackItem {
-    id: string;
+    id: string | number;
     weight: number;
     value: number;
 }
 
 interface KnapsackInputBuilderProps {
     onInputChange: (items: KnapsackItem[], capacity: number) => void;
+    initialData?: { items: KnapsackItem[]; capacity: number };
 }
 
-export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onInputChange }) => {
-    const [capacity, setCapacity] = useState(50);
-    const [items, setItems] = useState<KnapsackItem[]>([
+export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onInputChange, initialData }) => {
+    const [capacity, setCapacity] = useState(initialData?.capacity ?? 50);
+    const [items, setItems] = useState<KnapsackItem[]>(() => initialData?.items.map(item => ({ ...item })) ?? [
         { id: '1', weight: 10, value: 60 },
         { id: '2', weight: 20, value: 100 },
         { id: '3', weight: 30, value: 120 }
@@ -34,13 +35,12 @@ export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onIn
         setItems(newItems);
     };
 
-    const removeItem = (id: string) => {
+    const removeItem = (id: string | number) => {
         const newItems = items.filter(item => item.id !== id);
         setItems(newItems);
-        onInputChange(newItems, capacity);
     };
 
-    const updateItem = (id: string, field: 'weight' | 'value', value: number) => {
+    const updateItem = (id: string | number, field: 'weight' | 'value', value: number) => {
         const newItems = items.map(item =>
             item.id === id ? { ...item, [field]: value } : item
         );
