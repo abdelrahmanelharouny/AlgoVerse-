@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-    ArrowDownRight, ArrowUpRight, Binary, Braces, CalendarClock,
-    Coins, GitBranch, Network, Play, Route, Sigma, Trophy, Waypoints
+    ArrowDownRight, ArrowUpRight, ArrowLeftRight, Binary, Braces, CalendarClock,
+    Coins, GitBranch, Network, Package, Play, Route, Ruler, Sigma, TrendingUp, Trophy, Waypoints
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import ProgressTracker from '../components/ProgressTracker';
@@ -26,7 +26,11 @@ const algorithms: Algorithm[] = [
     { name: 'Longest Common Subsequence', slug: 'lcs', description: 'Trace the table that reveals the longest sequence shared by two strings.', tags: ['DP', 'Strings'], icon: Braces, accent: '#ff8063' },
     { name: 'Dijkstra', slug: 'dijkstra', description: 'Follow frontier updates and shortest-path decisions through a weighted graph.', tags: ['Greedy', 'Graph'], icon: Route, accent: '#83cbd8' },
     { name: 'Prim', slug: 'prims', description: 'Grow a minimum spanning tree one safe connecting edge at a time.', tags: ['Greedy', 'Graph'], icon: Network, accent: '#d6f56a' },
-    { name: 'Kruskal', slug: 'kruskals', description: 'Sort edges, reject cycles, and assemble a minimum spanning forest.', tags: ['Greedy', 'Graph'], icon: Waypoints, accent: '#ff8063' }
+    { name: 'Kruskal', slug: 'kruskals', description: 'Sort edges, reject cycles, and assemble a minimum spanning forest.', tags: ['Greedy', 'Graph'], icon: Waypoints, accent: '#ff8063' },
+    { name: 'Fractional Knapsack', slug: 'fractional-knapsack', description: 'Take whole or partial items by value density and watch capacity fill continuously.', tags: ['Greedy', 'Optimization'], icon: Package, accent: '#d6f56a' },
+    { name: 'Edit Distance', slug: 'edit-distance', description: 'Trace insert, delete, and replace decisions as one string becomes another.', tags: ['DP', 'Strings'], icon: ArrowLeftRight, accent: '#83cbd8' },
+    { name: 'Longest Increasing Subsequence', slug: 'lis', description: 'Follow how a best increasing subsequence is extended across the input.', tags: ['DP', 'Sequence'], icon: TrendingUp, accent: '#ff8063' },
+    { name: 'Rod Cutting', slug: 'rod-cutting', description: 'Build an optimal cutting plan from smaller revenue decisions.', tags: ['DP', 'Optimization'], icon: Ruler, accent: '#83cbd8' }
 ];
 
 const filters = ['All', 'DP', 'Greedy', 'Graph', 'Strings'] as const;
@@ -143,7 +147,7 @@ const Home: React.FC = () => {
             <section className="av-section" id="algorithms">
                 <div className="av-section__heading">
                     <div>
-                        <p className="av-eyebrow">The algorithm index / 09 studies</p>
+                        <p className="av-eyebrow">The algorithm index / {String(algorithms.length).padStart(2, '0')} studies</p>
                         <h2>Pick a problem.<br />Follow its logic.</h2>
                     </div>
                     <p>

@@ -11,6 +11,17 @@ import { problems, type Problem } from '../data/problems';
 const PROGRESS_KEY = 'algoverse_progress';
 const BOOKMARKS_KEY = 'algoverse_bookmarks';
 
+const implementedProblemIds = new Set([
+    'activity-selection', 'fractional-knapsack', 'coin-change-min',
+    'rod-cutting', 'lcs', '0-1-knapsack', 'matrix-chain',
+    'lis', 'edit-distance', 'interval-scheduling'
+]);
+
+const comparisonPaths: Record<string, string> = {
+    '0-1-knapsack': '/playground?algorithm=knapsack',
+    'coin-change-min': '/playground?algorithm=coin-change'
+};
+
 const getCompletedAlgorithms = (): Set<string> => {
     try {
         const saved = localStorage.getItem(PROGRESS_KEY);
@@ -120,6 +131,8 @@ const Problems = () => {
         const isCompleted = completed.has(problem.id);
         const isBookmarked = bookmarks.has(problem.id);
         const complexity = complexityData[problem.id] || { time: 'O(?)', space: 'O(?)', estimate: '10 min' };
+        const isImplemented = implementedProblemIds.has(problem.id);
+        const comparisonPath = comparisonPaths[problem.id];
 
         return (
             <motion.div
@@ -158,14 +171,20 @@ const Problems = () => {
                 </div>
 
                 <div className="flex gap-2">
-                    <Link to={`/visualizer/${problem.id}`} className="flex-1">
-                        <button className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
-                            <Activity size={16} /> Visualize
-                        </button>
-                    </Link>
-                    {problem.greedyWorks && (
-                        <Link to={`/visualizer/${problem.id}?method=greedy`} className="flex-1">
-                            <button className="w-full py-2 bg-slate-800 hover:bg-emerald-600/20 border border-slate-700 rounded-lg text-sm font-semibold">Compare</button>
+                    {isImplemented ? (
+                        <Link to={`/visualizer/${problem.id}`} className="flex-1">
+                            <button className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
+                                <Activity size={16} /> Visualize
+                            </button>
+                        </Link>
+                    ) : (
+                        <div className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-slate-700 py-2 text-xs font-semibold text-slate-400" aria-label="Planned for a future release">
+                            <Clock size={13} /> On the roadmap
+                        </div>
+                    )}
+                    {comparisonPath && (
+                        <Link to={comparisonPath} className="flex-1">
+                            <button className="w-full py-2 bg-slate-800 hover:bg-emerald-600/20 border border-slate-700 rounded-lg text-sm font-semibold">Compare methods</button>
                         </Link>
                     )}
                 </div>

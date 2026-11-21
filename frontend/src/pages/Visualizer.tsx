@@ -552,7 +552,7 @@ const Visualizer: React.FC = () => {
                     graph={inputData?.graph || {}}
                     currentStepData={currentStep?.data || {}}
                     visitedNodes={algorithmState.graphVisitedNodes}
-                    startNode={inputData?.start_node}
+                    startNode={algoType === AlgorithmType.KRUSKALS ? undefined : inputData?.start_node}
                     directed={algoType === AlgorithmType.DIJKSTRA}
                     accumulatedMstEdges={algorithmState.graphMstEdges}
                     accumulatedPathEdges={algorithmState.graphPathEdges}

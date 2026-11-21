@@ -290,7 +290,9 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#ff8063]" />Current</span>
                 <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#83cbd8]" />Visited</span>
                 <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#f6c56e]" />Checking</span>
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d6f56a] ring-1 ring-[#d6f56a]/40" />Chosen edge</span>
+                {directed
+                    ? <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#83cbd8]" />Shortest-path tree</span>
+                    : <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d6f56a] ring-1 ring-[#d6f56a]/40" />Chosen edge</span>}
             </div>
             <div className="absolute right-3 top-3 rounded-md border border-[#35483b] bg-[#101a14]/95 px-3 py-1.5 font-mono text-[9px] text-[#aab8ac] backdrop-blur-sm">
                 {Object.keys(graph).length} nodes / {edgeCount} edges
