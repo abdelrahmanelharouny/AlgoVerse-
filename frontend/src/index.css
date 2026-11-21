@@ -91,3 +91,41 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .av-graph-meta__legend { gap: 6px 10px; }
   .av-graph-meta__item { font-size: 8px; }
 }
+
+/* Switch to the compact navigation before tablet widths begin to crowd labels. */
+@media (min-width: 681px) and (max-width: 860px) {
+  .av-site-header__inner { padding: 0 22px; }
+  .av-nav, .av-header__action { display: none; }
+  .av-mobile-toggle {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    margin-left: auto;
+    color: var(--av-ink);
+    background: var(--av-surface);
+    border: 1px solid var(--av-line);
+    border-radius: 4px;
+  }
+  .av-mobile-nav {
+    position: absolute;
+    top: 71px;
+    right: 0;
+    left: 0;
+    display: grid;
+    gap: 0;
+    padding: 8px 22px 15px;
+    background: var(--av-surface);
+    border-bottom: 1px solid var(--av-line);
+    box-shadow: 0 14px 24px rgba(23, 37, 56, .12);
+    animation: av-soft-enter .18s ease both;
+  }
+  .av-mobile-nav a {
+    padding: 12px 9px;
+    color: #596979;
+    border-bottom: 1px solid #ece8df;
+    font-size: 12px;
+    font-weight: 650;
+  }
+  .av-mobile-nav a[aria-current="page"] { color: var(--av-coral); }
+}
