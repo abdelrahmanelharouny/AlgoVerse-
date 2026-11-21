@@ -34,6 +34,7 @@ def solve_edit_distance_dp(data) -> AlgorithmResult:
         data={
             "rows": n + 1,
             "cols": m + 1,
+            "initial_table": [row.copy() for row in dp],
             "row_labels": [""] + list(s1),
             "col_labels": [""] + list(s2)
         }
