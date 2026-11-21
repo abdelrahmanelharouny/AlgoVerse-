@@ -3,11 +3,13 @@ from api.algorithms.dijkstra import solve_dijkstra
 from api.algorithms.huffman import solve_huffman
 from api.algorithms.interval_scheduling import solve_interval_scheduling_greedy
 from api.algorithms.kruskals import solve_kruskals
-from api.algorithms.knapsack import solve_fractional_knapsack, solve_knapsack_dp
+from api.algorithms.knapsack import solve_fractional_knapsack, solve_knapsack_dp, solve_knapsack_greedy
 from api.algorithms.lis import solve_lis_dp
 from api.algorithms.matrix_chain import solve_matrix_chain_dp
 from api.algorithms.prims import solve_prims
 from api.algorithms.rod_cutting import solve_rod_cutting_dp
+import pytest
+
 from api.models import (
     CoinChangeInput, DijkstraInput, HuffmanInput, Interval, IntervalSchedulingInput,
     KnapsackInput, KnapsackItem, LISInput, MatrixChainInput, RodCuttingInput
@@ -82,3 +84,32 @@ def test_prim_and_kruskal_return_same_forest_weight_on_disconnected_graph():
     assert prim.result_value == kruskal.result_value == 5
     assert prim.result_data["components_count"] == kruskal.result_data["components_count"] == 2
     assert not prim.result_data["is_spanning_tree"]
+
+
+
+def test_dijkstra_rejects_negative_edges():
+    data = DijkstraInput(graph={"A": {"B": -1}, "B": {}}, start_node="A")
+    with pytest.raises(ValueError, match="negative edge"):
+        solve_dijkstra(data)
+
+
+def test_knapsack_greedy_handles_zero_weight_positive_value():
+    data = KnapsackInput(capacity=5, items=[
+        KnapsackItem(id="free", weight=0, value=10),
+        KnapsackItem(id="paid", weight=5, value=12),
+    ])
+    result = solve_knapsack_greedy(data)
+    assert result.result_value == 22
+    assert set(result.selected_items) == {"free", "paid"}
+
+
+def test_coin_change_rejects_zero_denomination():
+    with pytest.raises(ValueError):
+        CoinChangeInput(amount=5, coins=[1, 0, 2])
+
+
+def test_mst_rejects_conflicting_undirected_edge_weights():
+    graph = {"A": {"B": 2}, "B": {"A": 3}}
+    data = DijkstraInput(graph=graph, start_node="A")
+    with pytest.raises(ValueError, match="Conflicting weights"):
+        solve_kruskals(data)
