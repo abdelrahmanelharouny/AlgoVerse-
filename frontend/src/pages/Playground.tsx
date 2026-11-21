@@ -22,11 +22,14 @@ const SingleRunVisualizer = ({ result, type }: { result: AlgorithmResult, type: 
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
-        if (isPlaying && currentStep < result.steps.length - 1) {
-            timerRef.current = setTimeout(() => setCurrentStep(p => p + 1), 500);
-        } else if (currentStep >= result.steps.length - 1) {
-            setIsPlaying(false);
-        }
+        if (!isPlaying || result.steps.length === 0 || currentStep >= result.steps.length - 1) return;
+
+        const nextIndex = currentStep + 1;
+        timerRef.current = setTimeout(() => {
+            setCurrentStep(nextIndex);
+            if (nextIndex >= result.steps.length - 1) setIsPlaying(false);
+        }, 500);
+
         return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     }, [isPlaying, currentStep, result.steps.length]);
 
