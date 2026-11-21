@@ -1,7 +1,7 @@
 from time import perf_counter
 from typing import List
 
-from from api.models import AlgorithmResult, Metrics, RodCuttingInput, Step, StepType
+from api.models import AlgorithmResult, Metrics, RodCuttingInput, Step, StepType
 
 
 def solve_rod_cutting_dp(data: RodCuttingInput) -> AlgorithmResult:
