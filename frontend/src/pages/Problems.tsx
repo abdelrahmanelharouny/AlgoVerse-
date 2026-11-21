@@ -172,10 +172,8 @@ const Problems = () => {
 
                 <div className="flex gap-2">
                     {isImplemented ? (
-                        <Link to={`/visualizer/${problem.id}`} className="flex-1">
-                            <button className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
-                                <Activity size={16} /> Visualize
-                            </button>
+                        <Link to={`/visualizer/${problem.id}`} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-sm font-semibold hover:bg-indigo-500">
+                            <Activity size={16} /> Visualize
                         </Link>
                     ) : (
                         <div className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-slate-700 py-2 text-xs font-semibold text-slate-400" aria-label="Planned for a future release">
@@ -183,8 +181,8 @@ const Problems = () => {
                         </div>
                     )}
                     {comparisonPath && (
-                        <Link to={comparisonPath} className="flex-1">
-                            <button className="w-full py-2 bg-slate-800 hover:bg-emerald-600/20 border border-slate-700 rounded-lg text-sm font-semibold">Compare methods</button>
+                        <Link to={comparisonPath} className="flex flex-1 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 py-2 text-sm font-semibold hover:bg-emerald-600/20">
+                            Compare methods
                         </Link>
                     )}
                 </div>

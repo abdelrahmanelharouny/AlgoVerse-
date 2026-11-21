@@ -355,6 +355,7 @@ const Visualizer: React.FC = () => {
     useEffect(() => {
         requestSequence.current += 1;
         if (!algorithm) return;
+        setIsLoading(false);
         setLoadError(null);
         setSteps([]);
         setAlgorithmResult(null);

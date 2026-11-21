@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { MotionConfig } from 'framer-motion';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -24,8 +25,9 @@ const RouteLoadingFallback = () => (
 
 function App() {
   return (
-    <ErrorBoundary>
-      <Router>
+    <MotionConfig reducedMotion="user">
+      <ErrorBoundary>
+        <Router>
         <Suspense fallback={<RouteLoadingFallback />}>
           <Routes>
             <Route path="/" element={<Layout />}>
@@ -41,8 +43,9 @@ function App() {
             </Route>
           </Routes>
         </Suspense>
-      </Router>
-    </ErrorBoundary>
+        </Router>
+      </ErrorBoundary>
+    </MotionConfig>
   );
 }
 

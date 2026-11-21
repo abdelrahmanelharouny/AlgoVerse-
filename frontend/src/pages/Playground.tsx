@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Play, Sparkles, BarChart3, Coins, Package, Pause, RotateCcw, Trophy } from 'lucide-react';
 import { api } from '../utils/api';
 import { AlgorithmType } from '../types';
@@ -15,8 +16,20 @@ import GreedyChainCanvas from '../components/GreedyChainCanvas';
 import AlgorithmRacing from '../components/AlgorithmRacing';
 import InputPresets from '../components/InputPresets';
 
+type PlaygroundAlgorithm = 'knapsack' | 'coin-change';
+
 // Helper component for single run visualization
-const SingleRunVisualizer = ({ result, type }: { result: AlgorithmResult, type: 'greedy' | 'dp' }) => {
+const SingleRunVisualizer = ({
+    result,
+    type,
+    algorithm,
+    amount = 0
+}: {
+    result: AlgorithmResult;
+    type: 'greedy' | 'dp';
+    algorithm: PlaygroundAlgorithm;
+    amount?: number;
+}) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const state = useAlgorithmState(result.steps, currentStep);
@@ -37,7 +50,12 @@ const SingleRunVisualizer = ({ result, type }: { result: AlgorithmResult, type: 
     return (
         <div className="relative h-full w-full">
             {type === 'greedy' ? (
-                <GreedyChainCanvas decisions={state.greedyDecisions} currentIndex={state.greedyDecisions.length - 1} />
+                <GreedyChainCanvas
+                    mode={algorithm === 'coin-change' ? 'coins' : 'knapsack'}
+                    amount={amount}
+                    decisions={state.greedyDecisions}
+                    currentIndex={state.greedyDecisions.length - 1}
+                />
             ) : (
                 <DPTableCanvas data={state.dpTable} highlightedCell={state.highlightedCell} />
             )}
@@ -62,8 +80,6 @@ const SingleRunVisualizer = ({ result, type }: { result: AlgorithmResult, type: 
         </div>
     );
 };
-
-type PlaygroundAlgorithm = 'knapsack' | 'coin-change';
 
 const Playground = () => {
     const [searchParams] = useSearchParams();
@@ -375,7 +391,7 @@ const Playground = () => {
 
                                                 {/* Single Run Visualization */}
                                                 <div className="h-[300px] relative overflow-hidden rounded-lg bg-slate-950/50">
-                                                    <SingleRunVisualizer result={greedyResult} type="greedy" />
+                                                    <SingleRunVisualizer result={greedyResult} type="greedy" algorithm={selectedAlgorithm} amount={amount} />
                                                 </div>
                                             </div>
                                         )}
