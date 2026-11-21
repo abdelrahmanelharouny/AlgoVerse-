@@ -3,7 +3,7 @@ from collections import Counter
 from time import perf_counter
 from typing import Dict, Optional
 
-from from app.models import AlgorithmResult, HuffmanInput, Metrics, Step, StepType
+from app.models import AlgorithmResult, HuffmanInput, Metrics, Step, StepType
 
 
 class HuffmanNode:
