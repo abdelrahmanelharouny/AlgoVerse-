@@ -147,7 +147,7 @@ const Visualizer: React.FC = () => {
     const [steps, setSteps] = useState<Step[]>([]);
     const [algorithmResult, setAlgorithmResult] = useState<AlgorithmResult | null>(null);
     const [speed, setSpeed] = useState(1);
-    const [showCode, setShowCode] = useState(true);
+    const [showCode, setShowCode] = useState(() => typeof window !== 'undefined' && window.innerWidth > 1260);
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [predictionMode, setPredictionMode] = useState(false);
     const [showPredictionModal, setShowPredictionModal] = useState(false);

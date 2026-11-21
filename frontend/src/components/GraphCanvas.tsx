@@ -289,13 +289,13 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 aria-label={'Graph visualization with ' + Object.keys(graph).length + ' nodes and ' + edgeCount + ' ' + (directed ? 'directed edges' : 'edges') + '. Active algorithm states are highlighted.'}
             />
             <div className="absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1.5 rounded-md border border-[#344b67] bg-[#17263a]/95 px-3 py-2 text-[9px] text-[#c6d2df] backdrop-blur-sm">
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d6f56a]" />Start</span>
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#ff8063]" />Current</span>
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#83cbd8]" />Visited</span>
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#f6c56e]" />Checking</span>
+                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d5ef79]" />Start</span>
+                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#ed6247]" />Current</span>
+                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#78b8ff]" />Visited</span>
+                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#f2b75c]" />Checking</span>
                 {directed
-                    ? <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#83cbd8]" />Shortest-path tree</span>
-                    : <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d6f56a] ring-1 ring-[#d6f56a]/40" />Chosen edge</span>}
+                    ? <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#78b8ff]" />Shortest-path tree</span>
+                    : <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d5ef79] ring-1 ring-[#d6f56a]/40" />Chosen edge</span>}
             </div>
             <div className="absolute right-3 top-3 rounded-md border border-[#344b67] bg-[#17263a]/95 px-3 py-1.5 font-mono text-[9px] text-[#b7c5d4] backdrop-blur-sm">
                 {Object.keys(graph).length} nodes / {edgeCount} edges

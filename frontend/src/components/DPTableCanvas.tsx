@@ -47,6 +47,12 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
 }) => {
     const hostRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const activeCell = highlightedCell
+        ?? readCell(currentStepData?.cell)
+        ?? readCell(currentStepData?.active_cell)
+        ?? (typeof currentStepData?.i === 'number' && typeof currentStepData?.j === 'number'
+            ? { row: currentStepData.i, col: currentStepData.j }
+            : null);
 
     useEffect(() => {
         const host = hostRef.current;

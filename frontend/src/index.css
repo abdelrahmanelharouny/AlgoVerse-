@@ -37,3 +37,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .av-workspace__rail :where([class~="bg-[#1c2920]"]) { background-color: #223b43 !important; }
 .av-workspace__rail :where([class~="border-[#66734a]"]) { border-color: #5b806e !important; }
 .av-workspace__rail .glass-card { background: #1d2d43; border-color: #405570; box-shadow: none; }
+
+.av-dp-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 10px;
+  padding: 9px 11px;
+  color: #a9b8c9;
+  background: #17263a;
+  border: 1px solid #344b67;
+  border-radius: 3px;
+  font: 9px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.av-dp-caption strong { color: #d5ef79; font-size: 10px; }
+.av-dp-caption span:last-child { color: #8fa2b8; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
