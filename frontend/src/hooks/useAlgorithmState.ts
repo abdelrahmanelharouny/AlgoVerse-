@@ -47,6 +47,10 @@ const applyStep = (state: MutableAlgorithmState, step: Step) => {
             const cols = Math.max(0, data.cols);
             state.tableConfig = { rows, cols };
             state.dpTable = Array.from({ length: rows }, () => Array<number>(cols).fill(0));
+            if (Array.isArray(data.initial_table)) {
+                state.dpTable = data.initial_table.map((row: unknown[]) => row.map(value => Number(value) || 0));
+                state.tableConfig = { rows: state.dpTable.length, cols: Math.max(0, ...state.dpTable.map(row => row.length)) };
+            }
 
             // Some one-dimensional DP algorithms expose their initial row.
             if (Array.isArray(data.dp) && state.dpTable.length > 0) {
