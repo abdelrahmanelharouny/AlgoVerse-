@@ -12,7 +12,8 @@ export interface AlgorithmState {
 interface MutableAlgorithmState extends AlgorithmState {}
 interface Checkpoint { index: number; state: MutableAlgorithmState; }
 
-const CHECKPOINT_INTERVAL = 64;
+const MAX_CHECKPOINTS = 64;
+const SNAPSHOT_CELL_BUDGET = 250_000;
 
 const emptyState = (): MutableAlgorithmState => ({
     greedyDecisions: [],
@@ -125,6 +126,10 @@ export const useAlgorithmState = (steps: Step[], currentStepIndex: number): Algo
         }
 
         const targetIndex = Math.min(currentStepIndex, steps.length - 1);
+        const initStep = steps.find(step => step.type === StepType.INIT && typeof step.data?.rows === 'number' && typeof step.data?.cols === 'number');
+        const tableCellCount = initStep ? Math.max(1, initStep.data.rows * initStep.data.cols) : 1;
+        const checkpointBudget = Math.max(2, Math.min(MAX_CHECKPOINTS, Math.floor(SNAPSHOT_CELL_BUDGET / tableCellCount)));
+        const checkpointInterval = Math.max(64, Math.ceil(Math.max(1, steps.length) / checkpointBudget));
         if (targetIndex < -1 || steps.length === 0) {
             cache.index = -1;
             cache.state = emptyState();
@@ -132,7 +137,7 @@ export const useAlgorithmState = (steps: Step[], currentStepIndex: number): Algo
             // Normal playback: apply only the newly reached events.
             for (let index = cache.index + 1; index <= targetIndex; index++) {
                 applyStep(cache.state, steps[index]);
-                if ((index + 1) % CHECKPOINT_INTERVAL === 0) {
+                if ((index + 1) % checkpointInterval === 0) {
                     cache.checkpoints.set(index, cloneState(cache.state));
                 }
             }
