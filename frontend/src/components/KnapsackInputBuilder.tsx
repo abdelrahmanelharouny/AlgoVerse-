@@ -45,7 +45,6 @@ export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onIn
             item.id === id ? { ...item, [field]: value } : item
         );
         setItems(newItems);
-        onInputChange(newItems, capacity);
     };
 
     const updateCapacity = (value: number) => {
