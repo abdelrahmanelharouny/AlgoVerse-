@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
-    Trophy, Star, Target, Clock, Flame,
+    Trophy, Star, Target, BookOpen, Layers3,
     CheckCircle2, Circle, TrendingUp, Calendar,
     Award
 } from 'lucide-react';
@@ -68,10 +68,9 @@ const ProgressTracker: React.FC = () => {
     };
 
     const completedCount = algorithms.filter(algorithm => algorithm.completed).length;
-    const completionPercentage = Math.round((completedCount / defaultAlgorithms.length) * 100);
-    const streak = 0;
-    const totalTime = 0;
-
+    const totalCount = algorithms.length;
+    const completionPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    const remainingCount = Math.max(0, totalCount - completedCount);
     const categories = [...new Set(algorithms.map(a => a.category))];
 
     return (
@@ -101,7 +100,7 @@ const ProgressTracker: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-slate-800/50 rounded-xl p-4 text-center">
                         <Target className="mx-auto text-emerald-400 mb-2" size={24} />
-                        <div className="text-2xl font-bold text-white">{completedCount}/{defaultAlgorithms.length}</div>
+                        <div className="text-2xl font-bold text-white">{completedCount}/{totalCount}</div>
                         <div className="text-xs text-slate-500">Completed</div>
                     </div>
                     <div className="bg-slate-800/50 rounded-xl p-4 text-center">
@@ -110,14 +109,14 @@ const ProgressTracker: React.FC = () => {
                         <div className="text-xs text-slate-500">Progress</div>
                     </div>
                     <div className="bg-slate-800/50 rounded-xl p-4 text-center">
-                        <Flame className="mx-auto text-orange-400 mb-2" size={24} />
-                        <div className="text-2xl font-bold text-white">{streak}</div>
-                        <div className="text-xs text-slate-500">Day Streak</div>
+                        <BookOpen className="mx-auto text-orange-400 mb-2" size={24} />
+                        <div className="text-2xl font-bold text-white">{remainingCount}</div>
+                        <div className="text-xs text-slate-500">To explore</div>
                     </div>
                     <div className="bg-slate-800/50 rounded-xl p-4 text-center">
-                        <Clock className="mx-auto text-purple-400 mb-2" size={24} />
-                        <div className="text-2xl font-bold text-white">{Math.floor(totalTime / 60)}m</div>
-                        <div className="text-xs text-slate-500">Total Time</div>
+                        <Layers3 className="mx-auto text-purple-400 mb-2" size={24} />
+                        <div className="text-2xl font-bold text-white">{categories.length}</div>
+                        <div className="text-xs text-slate-500">Topic groups</div>
                     </div>
                 </div>
 
