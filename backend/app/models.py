@@ -50,8 +50,8 @@ class KnapsackItem(BaseModel):
 
 
 class KnapsackInput(BaseModel):
-    capacity: int = Field(ge=0, le=1_000)
-    items: List[KnapsackItem] = Field(max_length=100)
+    capacity: int = Field(ge=0, le=300)
+    items: List[KnapsackItem] = Field(max_length=50)
 
     @validator("items")
     def unique_item_ids(cls, items):
@@ -62,7 +62,7 @@ class KnapsackInput(BaseModel):
 
 
 class CoinChangeInput(BaseModel):
-    amount: int = Field(ge=0, le=2_000)
+    amount: int = Field(ge=0, le=500)
     coins: List[int] = Field(min_length=1, max_length=100)
 
     @validator("coins")
@@ -102,12 +102,12 @@ class MatrixChainInput(BaseModel):
 
 
 class HuffmanInput(BaseModel):
-    text: str = Field(max_length=10_000)
+    text: str = Field(max_length=5_000)
 
 
 class LCSInput(BaseModel):
-    text1: str = Field(max_length=250)
-    text2: str = Field(max_length=250)
+    text1: str = Field(max_length=150)
+    text2: str = Field(max_length=150)
 
 
 class DijkstraInput(BaseModel):
@@ -138,7 +138,7 @@ class LISInput(BaseModel):
 
 
 class RodCuttingInput(BaseModel):
-    length: int = Field(ge=0, le=500)
+    length: int = Field(ge=0, le=200)
     prices: List[float] = Field(max_length=10_000)
 
     @validator("prices")
