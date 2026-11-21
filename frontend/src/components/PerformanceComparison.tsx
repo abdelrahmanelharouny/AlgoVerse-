@@ -19,11 +19,14 @@ interface ComparisonResult {
 
 interface PerformanceComparisonProps {
     results: ComparisonResult;
+    objective?: 'maximize' | 'minimize';
 }
 
-export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ results }) => {
+export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ results, objective = 'maximize' }) => {
     const greedyOptimal = results.greedy.result === results.dp.result;
-    const winner = results.dp.result >= results.greedy.result ? 'dp' : 'greedy';
+    const winner = objective === 'minimize'
+        ? (results.dp.result <= results.greedy.result ? 'dp' : 'greedy')
+        : (results.dp.result >= results.greedy.result ? 'dp' : 'greedy');
     const difference = Math.abs(results.dp.result - results.greedy.result);
     const percentOff = results.dp.result > 0
         ? ((difference / results.dp.result) * 100).toFixed(1)
@@ -64,9 +67,9 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                     <div className="flex items-center gap-3">
                         <TrendingUp className="text-emerald-400" size={24} />
                         <div>
-                            <div className="font-semibold text-white">Both Algorithms Optimal!</div>
+                            <div className="font-semibold text-white">Both Algorithms Match!</div>
                             <div className="text-sm text-slate-300">
-                                Greedy found the optimal solution - much faster than DP
+                                Greedy and DP returned the same objective value
                             </div>
                         </div>
                     </div>
@@ -92,7 +95,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-emerald-400">Greedy Approach</h3>
-                            <p className="text-sm text-slate-400">Fast heuristic</p>
+                            <p className="text-sm text-slate-400">Fast heuristic · {objective === 'minimize' ? 'lower is better' : 'higher is better'}</p>
                         </div>
                     </div>
 
@@ -156,7 +159,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-indigo-400">Dynamic Programming</h3>
-                            <p className="text-sm text-slate-400">Guaranteed optimal</p>
+                            <p className="text-sm text-slate-400">Optimal reference · {objective === 'minimize' ? 'lower is better' : 'higher is better'}</p>
                         </div>
                     </div>
 
