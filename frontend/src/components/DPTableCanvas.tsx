@@ -9,10 +9,7 @@ interface DPTableCanvasProps {
     colLabels?: string[];
 }
 
-const CELL_SIZE = 58;
-const HEADER_HEIGHT = 44;
-const HEADER_WIDTH = 68;
-const PADDING = 20;
+const PADDING = 16;
 
 const readCell = (value: unknown): { row: number; col: number } | null => {
     if (!value || typeof value !== 'object') return null;
@@ -43,9 +40,13 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
 
         const rows = Array.isArray(data) ? data.length : 0;
         const cols = rows > 0 ? Math.max(0, ...data.map(row => row.length)) : 0;
-        const width = Math.max(220, cols * CELL_SIZE + HEADER_WIDTH + PADDING * 2);
-        const height = Math.max(110, rows * CELL_SIZE + HEADER_HEIGHT + PADDING * 2);
-        const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+        const density = Math.max(rows, cols);
+        const cellSize = density > 400 ? 10 : density > 200 ? 12 : density > 100 ? 16 : density > 50 ? 22 : 58;
+        const headerHeight = Math.max(28, Math.round(cellSize * 1.4));
+        const headerWidth = Math.max(40, Math.round(cellSize * 1.5));
+        const width = Math.max(220, cols * cellSize + headerWidth + PADDING * 2);
+        const height = Math.max(110, rows * cellSize + headerHeight + PADDING * 2);
+        const dpr = density > 100 ? 1 : Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
 
         canvas.width = Math.round(width * dpr);
         canvas.height = Math.round(height * dpr);
@@ -66,8 +67,8 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
             return;
         }
 
-        const originX = PADDING + HEADER_WIDTH;
-        const originY = PADDING + HEADER_HEIGHT;
+        const originX = PADDING + headerWidth;
+        const originY = PADDING + headerHeight;
         const active = highlightedCell
             ?? readCell(currentStepData?.cell)
             ?? readCell(currentStepData?.active_cell)
@@ -80,26 +81,26 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
             : [readCell(previous)].filter((cell): cell is { row: number; col: number } => cell !== null);
 
         // Column and row headings.
-        ctx.font = '12px Inter, sans-serif';
+        ctx.font = Math.max(8, Math.min(12, cellSize * 0.48)) + 'px Inter, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#94a3b8';
         for (let col = 0; col < cols; col++) {
             const label = colLabels?.[col] ?? String(col);
-            ctx.fillText(label, originX + col * CELL_SIZE + CELL_SIZE / 2, PADDING + HEADER_HEIGHT / 2);
+            ctx.fillText(label, originX + col * cellSize + cellSize / 2, PADDING + headerHeight / 2);
         }
         for (let row = 0; row < rows; row++) {
             const label = rowLabels?.[row] ?? String(row);
-            ctx.fillText(label, PADDING + HEADER_WIDTH / 2, originY + row * CELL_SIZE + CELL_SIZE / 2);
+            ctx.fillText(label, PADDING + headerWidth / 2, originY + row * cellSize + cellSize / 2);
         }
 
         // Dependency cells are outlined before the active cell is rendered.
         for (const cell of dependencies) {
             if (cell.row < 0 || cell.row >= rows || cell.col < 0 || cell.col >= cols) continue;
-            const x = originX + cell.col * CELL_SIZE;
-            const y = originY + cell.row * CELL_SIZE;
+            const x = originX + cell.col * cellSize;
+            const y = originY + cell.row * cellSize;
             ctx.fillStyle = 'rgba(14, 165, 233, 0.10)';
-            ctx.fillRect(x + 3, y + 3, CELL_SIZE - 6, CELL_SIZE - 6);
+            ctx.fillRect(x + 3, y + 3, cellSize - 6, CELL_SIZE - 6);
             ctx.strokeStyle = '#0ea5e9';
             ctx.lineWidth = 2;
             ctx.setLineDash([4, 3]);
@@ -109,24 +110,24 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
 
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
-                const x = originX + col * CELL_SIZE;
-                const y = originY + row * CELL_SIZE;
+                const x = originX + col * cellSize;
+                const y = originY + row * cellSize;
                 const value = data[row]?.[col] ?? 0;
                 const isActive = active?.row === row && active?.col === col;
 
                 ctx.fillStyle = isActive
                     ? 'rgba(99, 102, 241, 0.32)'
                     : value !== 0 ? '#1e293b' : '#0b1220';
-                ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                ctx.fillRect(x + 2, y + 2, cellSize - 4, CELL_SIZE - 4);
                 ctx.strokeStyle = isActive ? '#a5b4fc' : '#293548';
                 ctx.lineWidth = isActive ? 2.5 : 1;
                 ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
 
                 ctx.fillStyle = isActive ? '#ffffff' : value !== 0 ? '#e2e8f0' : '#64748b';
-                ctx.font = isActive ? 'bold 17px Inter, sans-serif' : '15px Inter, sans-serif';
+                ctx.font = isActive ? 'bold ' + Math.max(8, Math.round(cellSize * 0.34)) + 'px Inter, sans-serif' : Math.max(8, Math.round(cellSize * 0.3)) + 'px Inter, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(String(value), x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+                ctx.fillText(String(value), x + cellSize / 2, y + cellSize / 2);
             }
         }
 
