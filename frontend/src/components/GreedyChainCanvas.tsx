@@ -1,18 +1,27 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { type GreedyDecision } from '../types';
+import type { GreedyDecision } from '../types';
+
+type GreedyViewMode = 'knapsack' | 'fractional' | 'coins';
 
 interface GreedyChainCanvasProps {
     decisions: GreedyDecision[];
     currentIndex: number;
+    mode?: GreedyViewMode;
+    amount?: number;
 }
 
-const CARD_WIDTH = 180;
-const CARD_HEIGHT = 120;
-const CARD_SPACING = 34;
-const ARROW_LENGTH = 26;
+const CARD_WIDTH = 184;
+const CARD_HEIGHT = 132;
+const CARD_SPACING = 30;
+const ARROW_LENGTH = 22;
 
-const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({ decisions, currentIndex }) => {
+const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
+    decisions,
+    currentIndex,
+    mode = 'knapsack',
+    amount = 0
+}) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -22,10 +31,10 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({ decisions, curren
         if (!ctx) return;
 
         const totalWidth = Math.max(
-            300,
+            320,
             decisions.length * CARD_WIDTH + Math.max(0, decisions.length - 1) * (ARROW_LENGTH + CARD_SPACING) + 40
         );
-        const height = CARD_HEIGHT + 74;
+        const height = CARD_HEIGHT + 78;
         const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
 
         canvas.width = Math.round(totalWidth * dpr);
@@ -33,70 +42,99 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({ decisions, curren
         canvas.style.width = totalWidth + 'px';
         canvas.style.height = height + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
+        ctx.clearRect(0, 0, totalWidth, height);
         ctx.fillStyle = '#0d1510';
         ctx.fillRect(0, 0, totalWidth, height);
+
+        const drawRoundedRect = (x: number, y: number, width: number, boxHeight: number, radius: number) => {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + boxHeight - radius);
+            ctx.quadraticCurveTo(x + width, y + boxHeight, x + width - radius, y + boxHeight);
+            ctx.lineTo(x + radius, y + boxHeight);
+            ctx.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        };
 
         let xOffset = 20;
         decisions.forEach((decision, index) => {
             const isActive = index === currentIndex;
             const isPast = index < currentIndex;
             const x = xOffset;
-            const y = 34;
-            const picked = decision.picked;
+            const y = 35;
+            const accepted = decision.picked;
+            const statusColor = accepted ? '#d6f56a' : '#ff8063';
 
             ctx.fillStyle = isPast
-                ? (picked ? '#244d35' : '#542d29')
+                ? (accepted ? '#203b2b' : '#3d2823')
                 : isActive
-                    ? (picked ? '#314d2c' : '#60352d')
-                    : '#1a2920';
-            ctx.strokeStyle = isActive
-                ? (picked ? '#d6f56a' : '#ff8063')
-                : isPast
-                    ? (picked ? '#83bd81' : '#d98773')
-                    : '#46594b';
+                    ? (accepted ? '#304526' : '#4a2b25')
+                    : '#17231b';
+            ctx.strokeStyle = isActive ? statusColor : isPast ? (accepted ? '#7fae72' : '#b67564') : '#46594b';
             ctx.lineWidth = isActive ? 2.5 : 1.1;
-
-            const radius = 10;
-            ctx.beginPath();
-            ctx.moveTo(x + radius, y);
-            ctx.lineTo(x + CARD_WIDTH - radius, y);
-            ctx.quadraticCurveTo(x + CARD_WIDTH, y, x + CARD_WIDTH, y + radius);
-            ctx.lineTo(x + CARD_WIDTH, y + CARD_HEIGHT - radius);
-            ctx.quadraticCurveTo(x + CARD_WIDTH, y + CARD_HEIGHT, x + CARD_WIDTH - radius, y + CARD_HEIGHT);
-            ctx.lineTo(x + radius, y + CARD_HEIGHT);
-            ctx.quadraticCurveTo(x, y + CARD_HEIGHT, x, y + CARD_HEIGHT - radius);
-            ctx.lineTo(x, y + radius);
-            ctx.quadraticCurveTo(x, y, x + radius, y);
-            ctx.closePath();
+            drawRoundedRect(x, y, CARD_WIDTH, CARD_HEIGHT, 10);
             ctx.fill();
             ctx.stroke();
 
+            const itemLabel = mode === 'coins'
+                ? 'Coin ' + String(decision.itemId)
+                : 'Item ' + String(decision.itemId);
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
             ctx.fillStyle = '#eef2e8';
             ctx.font = '700 14px Inter, sans-serif';
-            ctx.fillText('Item ' + decision.itemId, x + 12, y + 12, 98);
+            ctx.fillText(itemLabel, x + 12, y + 12, 105);
 
-            ctx.fillStyle = picked ? 'rgba(214, 245, 106, .14)' : 'rgba(255, 128, 99, .14)';
-            ctx.fillRect(x + CARD_WIDTH - 68, y + 10, 56, 20);
-            ctx.fillStyle = picked ? '#d6f56a' : '#ff9b84';
+            ctx.fillStyle = accepted ? 'rgba(214, 245, 106, .14)' : 'rgba(255, 128, 99, .14)';
+            ctx.fillRect(x + CARD_WIDTH - 72, y + 10, 60, 20);
+            ctx.fillStyle = accepted ? '#d6f56a' : '#ff9b84';
             ctx.font = '700 9px Inter, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(picked ? 'PICK' : 'REJECT', x + CARD_WIDTH - 40, y + 16);
+            ctx.fillText(accepted ? 'PICK' : 'REJECT', x + CARD_WIDTH - 42, y + 16);
 
             ctx.textAlign = 'left';
             ctx.fillStyle = '#aab8ac';
             ctx.font = '11px ui-monospace, monospace';
-            ctx.fillText('Weight   ' + decision.weight, x + 12, y + 43);
-            ctx.fillText('Value     ' + decision.value, x + 12, y + 62);
-            ctx.fillText('Ratio     ' + (Number.isFinite(decision.ratio) ? decision.ratio.toFixed(2) : '—'), x + 12, y + 81);
-            ctx.fillStyle = '#75867a';
-            ctx.font = '9px Inter, sans-serif';
-            ctx.fillText('Cumulative value  ' + decision.currentTotal, x + 12, y + 103, CARD_WIDTH - 24);
+
+            if (mode === 'coins') {
+                const coin = Number(decision.itemId);
+                const count = decision.count ?? 0;
+                const remaining = decision.remaining ?? Math.max(0, amount - (decision.cumulativeWeight ?? 0));
+                ctx.fillText('Quantity       × ' + count, x + 12, y + 44);
+                ctx.fillText('Amount covered ' + (decision.cumulativeWeight ?? 0), x + 12, y + 64);
+                ctx.fillText('Coins used     ' + (decision.currentTotal ?? 0), x + 12, y + 84);
+                ctx.fillStyle = '#d6f56a';
+                ctx.font = '700 11px ui-monospace, monospace';
+                ctx.fillText('Remaining      ' + remaining, x + 12, y + 107);
+                if (Number.isFinite(coin) && coin > amount) {
+                    ctx.fillStyle = '#ff9b84';
+                    ctx.font = '9px Inter, sans-serif';
+                    ctx.fillText('Denomination exceeds target', x + 12, y + 121, CARD_WIDTH - 24);
+                }
+            } else if (mode === 'fractional') {
+                const fraction = decision.fraction ?? 0;
+                ctx.fillText('Fraction      ' + (fraction * 100).toFixed(1) + '%', x + 12, y + 44);
+                ctx.fillText('Weight taken  ' + decision.weight.toFixed(2), x + 12, y + 64);
+                ctx.fillText('Value gained  ' + decision.value.toFixed(2), x + 12, y + 84);
+                ctx.fillText('Density       ' + (Number.isFinite(decision.ratio) ? decision.ratio.toFixed(2) : '∞'), x + 12, y + 104);
+                ctx.fillStyle = '#d6f56a';
+                ctx.font = '700 10px ui-monospace, monospace';
+                ctx.fillText('Total value   ' + decision.currentTotal.toFixed(2), x + 12, y + 121, CARD_WIDTH - 24);
+            } else {
+                ctx.fillText('Weight   ' + decision.weight, x + 12, y + 45);
+                ctx.fillText('Value     ' + decision.value, x + 12, y + 66);
+                ctx.fillText('Ratio     ' + (Number.isFinite(decision.ratio) ? decision.ratio.toFixed(2) : '∞'), x + 12, y + 87);
+                ctx.fillStyle = '#d6f56a';
+                ctx.font = '700 10px ui-monospace, monospace';
+                ctx.fillText('Total value  ' + decision.currentTotal, x + 12, y + 111, CARD_WIDTH - 24);
+            }
 
             if (index < decisions.length - 1) {
-                const arrowX = xOffset + CARD_WIDTH + 7;
+                const arrowX = xOffset + CARD_WIDTH + 5;
                 const arrowY = y + CARD_HEIGHT / 2;
                 ctx.strokeStyle = isPast ? '#829585' : '#405247';
                 ctx.fillStyle = isPast ? '#829585' : '#405247';
@@ -115,7 +153,7 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({ decisions, curren
 
             xOffset += CARD_WIDTH + ARROW_LENGTH + CARD_SPACING;
         });
-    }, [decisions, currentIndex]);
+    }, [decisions, currentIndex, mode, amount]);
 
     if (decisions.length === 0) {
         return (
@@ -126,7 +164,9 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({ decisions, curren
             >
                 <div>
                     <p className="text-sm font-semibold text-[#dce5da]">No decisions yet</p>
-                    <p className="mt-2 text-xs text-[#87958a]">Play the trace to see accepted and rejected candidates appear here.</p>
+                    <p className="mt-2 text-xs text-[#87958a]">
+                        Play the trace to see {mode === 'coins' ? 'coin selections' : 'accepted and rejected candidates'} appear here.
+                    </p>
                 </div>
             </motion.div>
         );
@@ -137,12 +177,17 @@ const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({ decisions, curren
             className="max-w-full overflow-x-auto rounded-xl border border-[#33453a] bg-[#0d1510] p-3"
             initial={false}
             animate={{ opacity: 1 }}
+            transition={{ duration: .18 }}
         >
             <canvas
                 ref={canvasRef}
                 className="mx-auto block"
                 role="img"
-                aria-label={'Greedy decision chain with ' + decisions.length + ' decisions. Current decision is ' + (currentIndex + 1) + '.'}
+                aria-label={mode === 'coins'
+                    ? 'Greedy coin change decisions with denomination counts, amount covered, and remaining amount.'
+                    : mode === 'fractional'
+                        ? 'Fractional knapsack decisions with portions, weight taken, value gained, and density.'
+                        : 'Greedy item decisions showing accepted and rejected items with weight, value, and density.'}
             />
         </motion.div>
     );

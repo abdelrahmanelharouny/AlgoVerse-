@@ -114,6 +114,12 @@ export interface GreedyDecision {
     ratio: number;
     picked: boolean;
     currentTotal: number;
+    cumulativeWeight?: number;
+    start?: number;
+    end?: number;
+    count?: number;
+    remaining?: number;
+    fraction?: number;
 }
 
 export interface PrimsInput {

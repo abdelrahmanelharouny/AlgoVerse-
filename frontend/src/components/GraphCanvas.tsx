@@ -16,6 +16,9 @@ interface GraphCanvasProps {
     visitedNodes?: string[];
     startNode?: string;
     directed?: boolean;
+    accumulatedMstEdges?: Array<{ u: string; v: string; weight?: number }>;
+    accumulatedPathEdges?: Array<{ u: string; v: string; weight?: number }>;
+    distanceLabels?: Record<string, number | null>;
 }
 
 interface Position { x: number; y: number; }
@@ -87,7 +90,10 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     currentStepData,
     visitedNodes = [],
     startNode,
-    directed = false
+    directed = false,
+    accumulatedMstEdges = [],
+    accumulatedPathEdges = [],
+    distanceLabels = {}
 }) => {
     const hostRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -118,8 +124,9 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         () => calculateLayout(graph, width, height),
         [graph, width, height]
     );
-    const mstEdges = currentStepData?.mst_edges ?? [];
-    const pathEdges = currentStepData?.path_edges ?? [];
+    const mstEdges = currentStepData?.mst_edges ?? accumulatedMstEdges;
+    const pathEdges = currentStepData?.path_edges ?? accumulatedPathEdges;
+    const distances = currentStepData?.distances ?? distanceLabels;
     const mstEdgeKeys = useMemo(() => new Set(mstEdges.map(edge => edgeKey(edge.u, edge.v))), [mstEdges]);
     const pathEdgeKeys = useMemo(() => new Set(pathEdges.map(edge => edgeKey(edge.u, edge.v))), [pathEdges]);
     const edgeCount = useMemo(() => directed
@@ -252,8 +259,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             ctx.textBaseline = 'middle';
             ctx.fillText(node, position.x, position.y, nodeRadius * 1.65);
 
-            const distances = currentStepData?.distances;
-            if (distances && Object.prototype.hasOwnProperty.call(distances, node)) {
+            if (Object.prototype.hasOwnProperty.call(distances, node)) {
                 const distance = distances[node];
                 const label = distance === null || !Number.isFinite(distance) ? '∞' : String(distance);
                 ctx.fillStyle = '#a7b4a8';
@@ -284,6 +290,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#ff8063]" />Current</span>
                 <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#83cbd8]" />Visited</span>
                 <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#f6c56e]" />Checking</span>
+                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d6f56a] ring-1 ring-[#d6f56a]/40" />Chosen edge</span>
             </div>
             <div className="absolute right-3 top-3 rounded-md border border-[#35483b] bg-[#101a14]/95 px-3 py-1.5 font-mono text-[9px] text-[#aab8ac] backdrop-blur-sm">
                 {Object.keys(graph).length} nodes / {edgeCount} edges

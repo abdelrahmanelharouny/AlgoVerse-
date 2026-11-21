@@ -2,11 +2,21 @@ import { useMemo } from 'react';
 import { StepType } from '../types';
 import type { Step, GreedyDecision } from '../types';
 
+export interface GraphEdgeState {
+    u: string;
+    v: string;
+    weight?: number;
+}
+
 export interface AlgorithmState {
     greedyDecisions: GreedyDecision[];
     dpTable: number[][];
     highlightedCell: { row: number; col: number } | null;
     tableConfig: { rows: number; cols: number };
+    graphVisitedNodes: string[];
+    graphDistances: Record<string, number | null>;
+    graphMstEdges: GraphEdgeState[];
+    graphPathEdges: GraphEdgeState[];
 }
 
 type MutableAlgorithmState = AlgorithmState;
@@ -19,23 +29,33 @@ const emptyState = (): MutableAlgorithmState => ({
     greedyDecisions: [],
     dpTable: [],
     highlightedCell: null,
-    tableConfig: { rows: 0, cols: 0 }
+    tableConfig: { rows: 0, cols: 0 },
+    graphVisitedNodes: [],
+    graphDistances: {},
+    graphMstEdges: [],
+    graphPathEdges: []
 });
 
 const cloneState = (state: MutableAlgorithmState): MutableAlgorithmState => ({
     greedyDecisions: state.greedyDecisions.map(item => ({ ...item })),
     dpTable: state.dpTable.map(row => [...row]),
     highlightedCell: state.highlightedCell ? { ...state.highlightedCell } : null,
-    tableConfig: { ...state.tableConfig }
+    tableConfig: { ...state.tableConfig },
+    graphVisitedNodes: [...state.graphVisitedNodes],
+    graphDistances: { ...state.graphDistances },
+    graphMstEdges: state.graphMstEdges.map(edge => ({ ...edge })),
+    graphPathEdges: state.graphPathEdges.map(edge => ({ ...edge }))
 });
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
 const asCell = (value: unknown): { row: number; col: number } | null => {
-    if (!value || typeof value !== 'object') return null;
-    const candidate = value as Record<string, unknown>;
-    const row = typeof candidate.r === 'number' ? candidate.r
-        : typeof candidate.row === 'number' ? candidate.row : null;
-    const col = typeof candidate.c === 'number' ? candidate.c
-        : typeof candidate.col === 'number' ? candidate.col : null;
+    if (!isRecord(value)) return null;
+    const row = typeof value.r === 'number' ? value.r
+        : typeof value.row === 'number' ? value.row : null;
+    const col = typeof value.c === 'number' ? value.c
+        : typeof value.col === 'number' ? value.col : null;
     return row !== null && col !== null ? { row, col } : null;
 };
 
@@ -44,8 +64,58 @@ const asNumberArray = (value: unknown): number[] | null => {
     return value.map(item => typeof item === 'number' ? item : Number(item) || 0);
 };
 
+const asStringArray = (value: unknown): string[] | null => {
+    if (!Array.isArray(value)) return null;
+    return value.filter((item): item is string => typeof item === 'string');
+};
+
+const asDistanceMap = (value: unknown): Record<string, number | null> | null => {
+    if (!isRecord(value)) return null;
+    const distances: Record<string, number | null> = {};
+    for (const [node, distance] of Object.entries(value)) {
+        if (distance === null) distances[node] = null;
+        else if (typeof distance === 'number' && Number.isFinite(distance)) distances[node] = distance;
+    }
+    return distances;
+};
+
+const asGraphEdges = (value: unknown): GraphEdgeState[] | null => {
+    if (!Array.isArray(value)) return null;
+    return value.flatMap(item => {
+        if (!isRecord(item) || typeof item.u !== 'string' || typeof item.v !== 'string') return [];
+        return [{
+            u: item.u,
+            v: item.v,
+            ...(typeof item.weight === 'number' && Number.isFinite(item.weight) ? { weight: item.weight } : {})
+        }];
+    });
+};
+
+const edgesFromPredecessors = (value: unknown): GraphEdgeState[] | null => {
+    if (!isRecord(value)) return null;
+    return Object.entries(value).flatMap(([node, parent]) =>
+        typeof parent === 'string' ? [{ u: parent, v: node }] : []
+    );
+};
+
 const applyStep = (state: MutableAlgorithmState, step: Step) => {
     const data = (step.data ?? {}) as Record<string, unknown>;
+
+    // Graph state is cumulative: the current event often contains only the
+    // changed edge/node, while the visualizer must retain the full structure.
+    const visited = asStringArray(data.visited);
+    if (visited) state.graphVisitedNodes = visited;
+
+    const distances = asDistanceMap(data.distances);
+    if (distances) state.graphDistances = distances;
+
+    const mstEdges = asGraphEdges(data.mst_edges);
+    if (mstEdges) state.graphMstEdges = mstEdges;
+
+    const explicitPathEdges = asGraphEdges(data.path_edges);
+    const predecessorEdges = edgesFromPredecessors(data.predecessors);
+    if (explicitPathEdges) state.graphPathEdges = explicitPathEdges;
+    else if (predecessorEdges) state.graphPathEdges = predecessorEdges;
 
     if (step.type === StepType.INIT) {
         if (typeof data.rows === 'number' && typeof data.cols === 'number') {
@@ -112,13 +182,22 @@ const applyStep = (state: MutableAlgorithmState, step: Step) => {
     if (step.type === StepType.PICK || step.type === StepType.REJECT) {
         const rawId = data.item_id ?? data.itemId ?? data.coin ?? -1;
         const itemId = typeof rawId === 'string' || typeof rawId === 'number' ? rawId : -1;
+        const previousDecision = state.greedyDecisions[state.greedyDecisions.length - 1];
+        const weight = Number(data.weight ?? 0);
+        const value = Number(data.value ?? 0);
         const decision: GreedyDecision = {
             itemId,
-            weight: Number(data.weight ?? data.current_weight ?? 0),
-            value: Number(data.value ?? data.total_value ?? 0),
-            ratio: Number(data.ratio ?? 0),
+            weight,
+            value,
+            ratio: Number(data.ratio ?? (weight > 0 ? value / weight : 0)),
             picked: step.type === StepType.PICK,
-            currentTotal: Number(data.total_value ?? data.current_weight ?? 0)
+            currentTotal: Number(data.total_value ?? previousDecision?.currentTotal ?? 0),
+            cumulativeWeight: Number(data.current_weight ?? previousDecision?.cumulativeWeight ?? 0),
+            ...(typeof data.start === 'number' ? { start: data.start } : {}),
+            ...(typeof data.end === 'number' ? { end: data.end } : {}),
+            ...(typeof data.count === 'number' ? { count: data.count } : {}),
+            ...(typeof data.remaining === 'number' ? { remaining: data.remaining } : {}),
+            ...(typeof data.fraction === 'number' ? { fraction: data.fraction } : {})
         };
         state.greedyDecisions.push(decision);
     }

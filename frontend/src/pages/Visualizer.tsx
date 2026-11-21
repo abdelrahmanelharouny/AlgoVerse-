@@ -20,6 +20,7 @@ import GraphCanvas from '../components/GraphCanvas';
 import DPTableCanvas from '../components/DPTableCanvas';
 import HuffmanCanvas from '../components/HuffmanCanvas';
 import GreedyChainCanvas from '../components/GreedyChainCanvas';
+import IntervalTimelineCanvas from '../components/IntervalTimelineCanvas';
 import StepTimeline from '../components/StepTimeline';
 import StepInspector from '../components/StepInspector';
 import AlgorithmResultPanel from '../components/AlgorithmResultPanel';
@@ -505,6 +506,11 @@ const Visualizer: React.FC = () => {
             );
         }
 
+        const stepData = (currentStep?.data ?? {}) as {
+            item_id?: string | number;
+            interval_id?: string | number;
+        };
+
         switch (algoType) {
             case AlgorithmType.LCS:
                 return <DPTableCanvas
@@ -523,7 +529,6 @@ const Visualizer: React.FC = () => {
                     colLabels={Array.from({ length: (inputData?.capacity || 0) + 1 }, (_, index) => index.toString())}
                 />;
             case AlgorithmType.COIN_CHANGE_DP:
-            case AlgorithmType.COIN_CHANGE_GREEDY:
             case AlgorithmType.MATRIX_CHAIN:
             case AlgorithmType.LIS:
             case AlgorithmType.ROD_CUTTING:
@@ -546,9 +551,12 @@ const Visualizer: React.FC = () => {
                 return <GraphCanvas
                     graph={inputData?.graph || {}}
                     currentStepData={currentStep?.data || {}}
-                    visitedNodes={(currentStep?.data as { visited?: string[] } | undefined)?.visited || []}
+                    visitedNodes={algorithmState.graphVisitedNodes}
                     startNode={inputData?.start_node}
                     directed={algoType === AlgorithmType.DIJKSTRA}
+                    accumulatedMstEdges={algorithmState.graphMstEdges}
+                    accumulatedPathEdges={algorithmState.graphPathEdges}
+                    distanceLabels={algorithmState.graphDistances}
                 />;
             case AlgorithmType.HUFFMAN:
                 return <HuffmanCanvas
@@ -557,7 +565,24 @@ const Visualizer: React.FC = () => {
                     allSteps={steps}
                 />;
             case AlgorithmType.INTERVAL_SCHEDULING:
+                return <IntervalTimelineCanvas
+                    intervals={inputData?.intervals ?? []}
+                    decisions={algorithmState.greedyDecisions}
+                    activeIntervalId={stepData.item_id ?? stepData.interval_id}
+                />;
+            case AlgorithmType.COIN_CHANGE_GREEDY:
+                return <GreedyChainCanvas
+                    mode="coins"
+                    amount={inputData?.amount ?? 0}
+                    decisions={algorithmState.greedyDecisions}
+                    currentIndex={algorithmState.greedyDecisions.length - 1}
+                />;
             case AlgorithmType.FRACTIONAL_KNAPSACK:
+                return <GreedyChainCanvas
+                    mode="fractional"
+                    decisions={algorithmState.greedyDecisions}
+                    currentIndex={algorithmState.greedyDecisions.length - 1}
+                />;
             case AlgorithmType.GREEDY:
             case AlgorithmType.KNAPSACK_GREEDY:
                 return <GreedyChainCanvas
