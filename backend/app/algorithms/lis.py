@@ -1,7 +1,7 @@
 from time import perf_counter
 from typing import List
 
-from from app.models import AlgorithmResult, LISInput, Metrics, Step, StepType
+from app.models import AlgorithmResult, LISInput, Metrics, Step, StepType
 
 
 def solve_lis_dp(data: LISInput) -> AlgorithmResult:
