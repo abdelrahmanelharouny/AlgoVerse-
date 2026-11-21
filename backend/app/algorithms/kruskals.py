@@ -1,116 +1,64 @@
-import time
-from typing import Dict, List, Any
-from app.models import Step, StepType, AlgorithmResult, Metrics, DijkstraInput
+from time import perf_counter
+from typing import Dict, List
+
+from app.algorithms.graph_utils import undirected_edges
+from app.models import AlgorithmResult, DijkstraInput, Metrics, Step, StepType
+
 
 class UnionFind:
     def __init__(self, nodes):
         self.parent = {node: node for node in nodes}
         self.rank = {node: 0 for node in nodes}
-    
+        self.components = len(self.parent)
+
     def find(self, node):
+        if node not in self.parent:
+            raise ValueError(f"Unknown graph node: {node}")
         if self.parent[node] != node:
             self.parent[node] = self.find(self.parent[node])
         return self.parent[node]
-    
-    def union(self, u, v):
-        root_u = self.find(u)
-        root_v = self.find(v)
-        
-        if root_u != root_v:
-            if self.rank[root_u] > self.rank[root_v]:
-                self.parent[root_v] = root_u
-            elif self.rank[root_u] < self.rank[root_v]:
-                self.parent[root_u] = root_v
-            else:
-                self.parent[root_v] = root_u
-                self.rank[root_u] += 1
-            return True
-        return False
+
+    def union(self, left, right):
+        root_left = self.find(left)
+        root_right = self.find(right)
+        if root_left == root_right:
+            return False
+        if self.rank[root_left] < self.rank[root_right]:
+            root_left, root_right = root_right, root_left
+        self.parent[root_right] = root_left
+        if self.rank[root_left] == self.rank[root_right]:
+            self.rank[root_left] += 1
+        self.components -= 1
+        return True
+
 
 def solve_kruskals(data: DijkstraInput) -> AlgorithmResult:
-    start_time = time.time()
-    steps = []
-    
-    graph = data.graph
-    
-    # Extract all edges: (weight, u, v)
-    edges = []
-    seen_edges = set()
-    
-    # DijkstraInput graph is directed-ish structure but usually used as undirected for MST
-    # We'll treat A->B with weight W as the same edge as B->A with weight W
-    for u, neighbors in graph.items():
-        for v, w in neighbors.items():
-            edge_key = tuple(sorted((u, v)))
-            if edge_key not in seen_edges:
-                edges.append((w, u, v))
-                seen_edges.add(edge_key)
-                
-    # Sort edges by weight
-    edges.sort()
-    
-    steps.append(Step(
-        type=StepType.SORT,
-        description=f"Sorted {len(edges)} edges by weight",
-        data={
-            "edges": [{"u": u, "v": v, "weight": w} for w, u, v in edges],
-            "graph": graph
-        }
-    ))
-    
-    uf = UnionFind(graph.keys())
-    mst_weight = 0
-    mst_edges = []
-    
-    for w, u, v in edges:
-        steps.append(Step(
-            type=StepType.HIGHLIGHT,
-            description=f"Checking edge {u}-{v} (weight {w})",
-            data={
-                "u": u, 
-                "v": v, 
-                "weight": w,
-                "current_node": u,
-                "checking_neighbor": v
-            }
-        ))
-        
-        if uf.union(u, v):
-            mst_weight += w
-            mst_edges.append({"u": u, "v": v, "weight": w})
-            
-            steps.append(Step(
-                type=StepType.PICK,
-                description=f"Added edge {u}-{v} to MST. No cycle detected.",
-                data={
-                    "u": u,
-                    "v": v, 
-                    "weight": w,
-                    "mst_edges": mst_edges
-                }
-            ))
+    """Minimum spanning forest using Kruskal and path-compressed Union-Find."""
+    nodes, edges = undirected_edges(data.graph)
+    started = perf_counter()
+    steps: List[Step] = [Step(type=StepType.SORT, description=f"Sort {len(edges)} unique undirected edges by increasing weight", data={"edges": [{"u": left, "v": right, "weight": weight} for weight, left, right in edges]})]
+    union_find = UnionFind(nodes)
+    mst_edges: List[Dict[str, object]] = []
+    total_weight = 0.0
+    operations = 0
+
+    for weight, left, right in edges:
+        operations += 1
+        steps.append(Step(type=StepType.HIGHLIGHT, description=f"Evaluate edge {left} — {right} (weight {weight:g})", data={"u": left, "v": right, "weight": weight, "current_node": left, "checking_neighbor": right}))
+        if union_find.union(left, right):
+            edge = {"u": left, "v": right, "weight": weight}
+            mst_edges.append(edge)
+            total_weight += weight
+            steps.append(Step(type=StepType.PICK, description=f"Accept {left} — {right}; it connects two different components", data={"u": left, "v": right, "weight": weight, "mst_edges": list(mst_edges), "total_weight": total_weight}))
         else:
-            steps.append(Step(
-                type=StepType.REJECT,
-                description=f"Skipped edge {u}-{v}. Cycle detected.",
-                data={
-                    "u": u,
-                    "v": v,
-                    "weight": w,
-                    "mst_edges": mst_edges
-                }
-            ))
-            
-    end_time = time.time()
-    
+            steps.append(Step(type=StepType.REJECT, description=f"Reject {left} — {right}; it would create a cycle", data={"u": left, "v": right, "weight": weight, "mst_edges": list(mst_edges)}))
+
+    component_count = union_find.components
+    is_spanning_tree = len(nodes) > 0 and component_count == 1
+    steps.append(Step(type=StepType.SOLUTION, description=f"Minimum spanning forest complete: {len(mst_edges)} edges across {component_count} component(s)", data={"mst_edges": mst_edges, "total_weight": total_weight, "components_count": component_count, "is_spanning_tree": is_spanning_tree}))
+    elapsed = perf_counter() - started
     return AlgorithmResult(
-        steps=steps,
-        result_value=mst_weight,
-        selected_items=[],
-        metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity=f"O(V)",
-            time_complexity=f"O(E log E)",
-            step_count=len(steps)
-        )
+        steps=steps, result_value=total_weight, selected_items=[],
+        result_data={"mst_edges": mst_edges, "total_weight": total_weight, "components_count": component_count, "is_spanning_tree": is_spanning_tree},
+        metrics=Metrics(time_taken=elapsed, time_complexity="O(E log E)", space_complexity="O(V)", step_count=len(steps), operation_count=operations)
     )
