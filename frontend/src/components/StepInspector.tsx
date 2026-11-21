@@ -21,7 +21,7 @@ const stepTone: Record<string, string> = {
 };
 
 const explainStep = (step: Step, algorithmName: string): string => {
-    const data = (step.data ?? {}) as Record<string, any>;
+    const data = (step.data ?? {}) as Record<string, unknown>;
     switch (step.type) {
         case 'init':
             return 'The algorithm is preparing its data structures and establishing the starting state. Check the initial values before following the next decision.';
