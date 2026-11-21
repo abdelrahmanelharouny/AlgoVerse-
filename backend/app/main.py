@@ -1,8 +1,9 @@
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy
+from fastapi.responses import JSONResponse
+from app.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy, solve_fractional_knapsack
 from app.algorithms.coin_change import solve_coin_change_dp, solve_coin_change_greedy
 from app.algorithms.interval_scheduling import solve_interval_scheduling_greedy, solve_interval_scheduling_dp
 from app.algorithms.matrix_chain import solve_matrix_chain_dp
@@ -21,6 +22,11 @@ from app.models import (
 )
 
 app = FastAPI(title="Algorithm Visualizer API", root_path="/api")
+
+@app.exception_handler(ValueError)
+async def handle_algorithm_input_error(request: Request, exc: ValueError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
 
 def _allowed_origins() -> list[str]:
     configured = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
@@ -52,6 +58,12 @@ def solve_knapsack(algorithm_type: str, data: KnapsackInput):
         return solve_knapsack_greedy(data)
     else:
         raise HTTPException(status_code=400, detail=f"Unknown algorithm type: {algorithm_type}")
+
+
+
+@app.post("/solve/fractional-knapsack", response_model=AlgorithmResult)
+def solve_fractional_knapsack_endpoint(data: KnapsackInput):
+    return solve_fractional_knapsack(data)
 
 @app.post("/solve/coin-change/{algorithm_type}", response_model=AlgorithmResult)
 def solve_coin_change(algorithm_type: str, data: CoinChangeInput):
