@@ -4,6 +4,8 @@ interface GraphCanvasProps {
     graph: Record<string, Record<string, number>>;
     currentStepData?: any;
     visitedNodes?: string[];
+    startNode?: string;
+    directed?: boolean;
 }
 
 interface Position { x: number; y: number; }
@@ -68,7 +70,9 @@ const calculateLayout = (
 const GraphCanvas: React.FC<GraphCanvasProps> = ({
     graph,
     currentStepData,
-    visitedNodes = []
+    visitedNodes = [],
+    startNode,
+    directed = false
 }) => {
     const hostRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -132,7 +136,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 const end = nodePositions[to];
                 if (!end) return;
                 const key = [from, to].sort().join('::');
-                if (drawnEdges.has(key)) return;
+                if (!directed && drawnEdges.has(key)) return;
                 drawnEdges.add(key);
 
                 const isMst = mstEdges.some(edge =>
@@ -149,6 +153,21 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 ctx.strokeStyle = isMst ? '#22c55e' : isPath ? '#38bdf8' : isActive ? '#f59e0b' : '#475569';
                 ctx.lineWidth = isMst || isPath ? 4 : isActive ? 3.5 : 2;
                 ctx.stroke();
+
+                if (directed) {
+                    const angle = Math.atan2(end.y - start.y, end.x - start.x);
+                    const nodeRadius = width < 460 ? 21 : 26;
+                    const tipX = end.x - Math.cos(angle) * (nodeRadius + 2);
+                    const tipY = end.y - Math.sin(angle) * (nodeRadius + 2);
+                    const wing = 7;
+                    ctx.beginPath();
+                    ctx.moveTo(tipX, tipY);
+                    ctx.lineTo(tipX - Math.cos(angle - Math.PI / 6) * wing, tipY - Math.sin(angle - Math.PI / 6) * wing);
+                    ctx.lineTo(tipX - Math.cos(angle + Math.PI / 6) * wing, tipY - Math.sin(angle + Math.PI / 6) * wing);
+                    ctx.closePath();
+                    ctx.fillStyle = isMst ? '#22c55e' : isPath ? '#38bdf8' : isActive ? '#f59e0b' : '#94a3b8';
+                    ctx.fill();
+                }
 
                 const midX = (start.x + end.x) / 2;
                 const midY = (start.y + end.y) / 2;
@@ -167,11 +186,11 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             });
         });
 
-        const startNode = currentStepData?.start_node;
+        const visibleStartNode = currentStepData?.start_node ?? startNode;
         Object.entries(nodePositions).forEach(([node, position]) => {
             const isCurrent = currentStepData?.current_node === node;
             const isChecking = currentStepData?.checking_neighbor === node;
-            const isStart = startNode === node;
+            const isStart = visibleStartNode === node;
             const isVisited = visited.has(node);
             const radius = width < 460 ? 21 : 26;
 
@@ -210,8 +229,12 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         }
     }, [graph, nodePositions, currentStepData, visitedNodes, width, height]);
 
+    const edgeCount = directed
+        ? Object.values(graph).reduce((total, neighbors) => total + Object.keys(neighbors).length, 0)
+        : new Set(Object.entries(graph).flatMap(([from, neighbors]) => Object.keys(neighbors).map(to => [from, to].sort().join('::')))).size;
+
     return (
-        <div ref={hostRef} className="relative w-full min-w-0 rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
+        <div ref={hostRef className="relative w-full min-w-0 rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
             <canvas
                 ref={canvasRef}
                 className="block w-full"
@@ -225,9 +248,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-amber-500" />Checking</span>
             </div>
             <div className="absolute right-3 top-3 rounded-lg bg-slate-900/90 px-3 py-1.5 text-xs text-slate-400 backdrop-blur">
-                {Object.keys(graph).length} nodes · {new Set(Object.entries(graph).flatMap(([from, neighbors]) =>
-                    Object.keys(neighbors).map(to => [from, to].sort().join('::'))
-                )).size} edges
+                {Object.keys(graph).length} nodes · {edgeCount} {directed ? 'directed edges' : 'edges'}
             </div>
         </div>
     );
