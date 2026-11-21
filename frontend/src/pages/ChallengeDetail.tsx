@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Play, Package, Coins, Calendar, Trophy } from 'lucide-react';
@@ -48,6 +48,17 @@ const ChallengeDetail = () => {
     const handleIntervalInputChange = useCallback((intervals: IntervalSchedulingInput['intervals']) => {
         setIntervalInput({ intervals });
     }, []);
+
+    useEffect(() => {
+        setHintsUsed(0);
+        setAnswerGuess('');
+        setSubmitError(null);
+        setShowResults(false);
+        setTestResults([]);
+        setPassed(false);
+        setStars(0);
+        setLoading(false);
+    }, [challengeId]);
 
     if (!challenge) {
         return (
@@ -231,15 +242,27 @@ const ChallengeDetail = () => {
                         <p className="text-sm text-slate-500 mb-4">Change the instance, predict the optimal objective, then inspect the reference result.</p>
 
                         {challenge.algorithmType === 'knapsack' && (
-                            <KnapsackInputBuilder onInputChange={handleKnapsackInputChange} />
+                            <KnapsackInputBuilder
+                                key={challenge.id}
+                                initialData={challenge.testCases[0]?.input as KnapsackInput}
+                                onInputChange={handleKnapsackInputChange}
+                            />
                         )}
 
                         {challenge.algorithmType === 'coin-change' && (
-                            <CoinChangeInputBuilder onInputChange={handleCoinChangeInputChange} />
+                            <CoinChangeInputBuilder
+                                key={challenge.id}
+                                initialData={challenge.testCases[0]?.input as CoinChangeInput}
+                                onInputChange={handleCoinChangeInputChange}
+                            />
                         )}
 
                         {challenge.algorithmType === 'interval-scheduling' && (
-                            <IntervalInputBuilder onInputChange={handleIntervalInputChange} />
+                            <IntervalInputBuilder
+                                key={challenge.id}
+                                initialData={(challenge.testCases[0]?.input as IntervalSchedulingInput | undefined)?.intervals}
+                                onInputChange={handleIntervalInputChange}
+                            />
                         )}
                     </div>
 
