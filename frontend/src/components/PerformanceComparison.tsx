@@ -76,6 +76,8 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                 </motion.div>
             )}
 
+            <p className="text-xs leading-relaxed text-slate-500">Timing includes building the visualization trace, so it is not a pure algorithm-runtime benchmark. Use the objective value and trace decisions to compare correctness.</p>
+
             {/* Comparison Grid */}
             <div className="grid md:grid-cols-2 gap-6">
                 {/* Greedy Results */}
@@ -123,7 +125,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                             <div className="bg-slate-950 rounded-lg p-3">
                                 <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
                                     <Clock size={14} />
-                                    <span>Time</span>
+                                    <span>Trace build</span>
                                 </div>
                                 <div className="font-mono text-emerald-300 text-sm">{results.greedy.time}</div>
                             </div>
