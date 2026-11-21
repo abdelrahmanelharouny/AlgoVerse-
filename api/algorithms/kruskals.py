@@ -60,5 +60,5 @@ def solve_kruskals(data: DijkstraInput) -> AlgorithmResult:
     return AlgorithmResult(
         steps=steps, result_value=total_weight, selected_items=[],
         result_data={"mst_edges": mst_edges, "total_weight": total_weight, "components_count": component_count, "is_spanning_tree": is_spanning_tree},
-        metrics=Metrics(time_taken=elapsed, time_complexity="O(E log E)", space_complexity="O(V)", step_count=len(steps), operation_count=operations)
+        metrics=Metrics(time_taken=elapsed, time_complexity="O(E log E)", space_complexity="O(V + E)", step_count=len(steps), operation_count=operations)
     )
