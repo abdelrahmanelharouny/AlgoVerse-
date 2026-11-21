@@ -115,8 +115,8 @@ const algorithmInfo: Record<string, {
     },
     'huffman': {
         description: "Build optimal prefix-free codes for data compression based on character frequencies.",
-        timeComplexity: 'O(n + k log k)',
-        spaceComplexity: 'O(n + k)',
+        timeComplexity: 'O(n + k log k + B)',
+        spaceComplexity: 'O(k + B)',
         keyInsight: 'Always combine two lowest frequency nodes - builds optimal tree bottom-up.',
         type: 'greedy'
     },
