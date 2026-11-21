@@ -75,7 +75,7 @@ const AlgorithmResultPanel: React.FC<AlgorithmResultPanelProps> = ({ result, alg
                     </div>
                 </details>
                 <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-                    The displayed time includes algorithm execution and trace-event generation. Use the benchmark view for isolated runtime comparisons.
+                    The displayed time includes algorithm execution and trace-event generation. It is a visualization build time, not an isolated algorithm benchmark.
                 </p>
             </div>
         </section>
