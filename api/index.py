@@ -24,7 +24,7 @@ from api.models import (
     DijkstraInput, EditDistanceInput, LISInput, RodCuttingInput
 )
 
-app = FastAPI(title="Algorithm Visualizer API")
+app = FastAPI(title="Algorithm Visualizer API", root_path="/api")
 
 @app.exception_handler(ValueError)
 async def handle_algorithm_input_error(request: Request, exc: ValueError):
