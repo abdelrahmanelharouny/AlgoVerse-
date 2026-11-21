@@ -8,89 +8,87 @@ interface StepTimelineProps {
     stepTypes?: string[];
 }
 
+const stepColor = (type?: string): string => {
+    switch ((type || '').toLowerCase()) {
+        case 'init': return '#83cbd8';
+        case 'highlight': return '#ffbd63';
+        case 'update': return '#d6f56a';
+        case 'pick': return '#9fe0aa';
+        case 'reject': return '#ff8063';
+        case 'sort': return '#c6a5f5';
+        case 'solution': return '#d6f56a';
+        default: return '#809187';
+    }
+};
+
 const StepTimeline: React.FC<StepTimelineProps> = ({
     totalSteps,
     currentStep,
     onStepClick,
     stepTypes = []
 }) => {
-    // Show up to 20 dots for steps, otherwise use condensed view
-    const showDots = totalSteps <= 20;
-    const progress = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 0;
-
-    const getStepColor = (type?: string) => {
-        switch (type) {
-            case 'INIT': return 'bg-blue-500';
-            case 'HIGHLIGHT': return 'bg-yellow-500';
-            case 'UPDATE': return 'bg-emerald-500';
-            case 'PICK': return 'bg-green-500';
-            case 'REJECT': return 'bg-red-500';
-            case 'COMPARE': return 'bg-purple-500';
-            case 'SORT': return 'bg-orange-500';
-            default: return 'bg-indigo-500';
-        }
-    };
+    const showDots = totalSteps > 0 && totalSteps <= 20;
+    const progress = totalSteps > 0
+        ? Math.max(0, Math.min(100, ((currentStep + 1) / totalSteps) * 100))
+        : 0;
+    const activeLabel = currentStep < 0 ? 'Ready to begin' : 'Step ' + (currentStep + 1) + ' of ' + totalSteps;
 
     return (
-        <div className="w-full">
-            {/* Progress bar with step info */}
-            <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-400">
-                    Step <span className="text-white font-semibold">{currentStep + 1}</span> of {totalSteps}
+        <div className="w-full" aria-label="Execution timeline">
+            <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-[10px] font-semibold text-[#aab7ac]" aria-live="polite">
+                    {totalSteps === 0 ? 'No trace loaded' : activeLabel}
                 </span>
-                <span className="text-xs text-indigo-400 font-mono">
-                    {Math.round(progress)}%
-                </span>
+                <span className="font-mono text-[10px] text-[#d6f56a]">{Math.round(progress)}%</span>
             </div>
 
-            {/* Timeline track */}
             <div className="relative">
-                {/* Background track */}
-                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-[5px] overflow-hidden rounded-full bg-[#2a392f]">
                     <motion.div
-                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 0.2 }}
+                        className="h-full rounded-full bg-[#d6f56a]"
+                        initial={false}
+                        animate={{ width: progress + '%' }}
+                        transition={{ duration: .2 }}
                     />
                 </div>
-
-                {/* Clickable slider handle */}
-                <input
-                    type="range"
-                    min="0"
-                    max={Math.max(0, totalSteps - 1)}
-                    value={currentStep >= 0 ? currentStep : 0}
-                    onChange={(e) => onStepClick(parseInt(e.target.value))}
-                    className="absolute inset-0 w-full h-2 opacity-0 cursor-pointer"
-                    style={{ margin: 0 }}
-                />
-
-                {/* Show dots for small step counts */}
-                {showDots && totalSteps > 0 && (
-                    <div className="absolute inset-0 flex items-center justify-between px-1 pointer-events-none">
-                        {Array.from({ length: totalSteps }).map((_, i) => (
+                {totalSteps > 0 && (
+                    <input
+                        type="range"
+                        min="0"
+                        max={Math.max(0, totalSteps - 1)}
+                        value={currentStep >= 0 ? currentStep : 0}
+                        onChange={event => onStepClick(parseInt(event.target.value, 10))}
+                        className="absolute inset-0 z-0 h-[5px] w-full cursor-pointer opacity-0"
+                        aria-label="Seek to algorithm step"
+                    />
+                )}
+                {showDots && (
+                    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-between px-[2px]">
+                        {Array.from({ length: totalSteps }).map((_, index) => (
                             <button
-                                key={i}
-                                onClick={() => onStepClick(i)}
-                                className={`w-2 h-2 rounded-full transition-all pointer-events-auto hover:scale-150 ${i <= currentStep
-                                        ? getStepColor(stepTypes[i])
-                                        : 'bg-slate-600'
-                                    } ${i === currentStep ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-950' : ''}`}
-                                title={`Step ${i + 1}${stepTypes[i] ? ` (${stepTypes[i]})` : ''}`}
+                                key={index}
+                                type="button"
+                                onClick={() => onStepClick(index)}
+                                className="pointer-events-auto h-[9px] w-[9px] rounded-full border border-[#0f1712] transition-transform hover:scale-150 focus-visible:scale-150"
+                                style={{
+                                    backgroundColor: index <= currentStep ? stepColor(stepTypes[index]) : '#45554a',
+                                    boxShadow: index === currentStep ? '0 0 0 2px #d6f56a' : 'none'
+                                }}
+                                title={'Go to step ' + (index + 1) + (stepTypes[index] ? ' (' + stepTypes[index] + ')' : '')}
+                                aria-label={'Go to step ' + (index + 1)}
+                                aria-current={index === currentStep ? 'step' : undefined}
                             />
                         ))}
                     </div>
                 )}
             </div>
 
-            {/* Step type legend */}
-            <div className="flex flex-wrap gap-2 mt-3 text-xs">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> Init</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500"></span> Check</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Update</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Pick</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span> Reject</span>
+            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-[9px] text-[#7f8e83]">
+                <span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-[#83cbd8]" /> Init</span>
+                <span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-[#ffbd63]" /> Check</span>
+                <span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-[#d6f56a]" /> Update</span>
+                <span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-[#9fe0aa]" /> Pick</span>
+                <span className="inline-flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-[#ff8063]" /> Reject</span>
             </div>
         </div>
     );

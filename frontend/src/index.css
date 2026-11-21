@@ -42,3 +42,27 @@
 ::-webkit-scrollbar-thumb:hover {
     @apply bg-slate-700;
 }
+
+/* Cross-page palette bridge: keep all existing learning screens inside the same
+   Field Lab art direction while their component-level markup is being refined. */
+.av-app :where([class~="bg-slate-950"]) { background-color: #0b100f !important; }
+.av-app :where([class~="bg-slate-900"], [class~="bg-slate-900/50"], [class~="bg-slate-900/80"], [class~="bg-slate-900/90"]) { background-color: #141d19 !important; }
+.av-app :where([class~="bg-slate-800"], [class~="bg-slate-800/50"], [class~="bg-slate-800/70"]) { background-color: #1b2721 !important; }
+.av-app :where([class~="bg-slate-700"]) { background-color: #2a3a30 !important; }
+.av-app :where([class~="border-slate-950"], [class~="border-slate-900"], [class~="border-slate-800"], [class~="border-slate-700"]) { border-color: #2b3931 !important; }
+.av-app :where([class~="text-slate-100"], [class~="text-slate-200"], [class~="text-white"]) { color: #edf0e7; }
+.av-app :where([class~="text-slate-300"]) { color: #c4cec3; }
+.av-app :where([class~="text-slate-400"]) { color: #9aa79c; }
+.av-app :where([class~="text-slate-500"]) { color: #7c8b80; }
+.av-app :where([class~="text-slate-600"]) { color: #68766d; }
+.av-app :where([class~="text-indigo-300"], [class~="text-indigo-400"], [class~="text-indigo-500"], [class~="text-purple-300"], [class~="text-purple-400"], [class~="text-violet-400"]) { color: #d6f56a !important; }
+.av-app :where([class~="text-emerald-300"], [class~="text-emerald-400"], [class~="text-green-400"], [class~="text-cyan-400"], [class~="text-blue-400"]) { color: #83cbd8 !important; }
+.av-app :where([class~="text-yellow-300"], [class~="text-yellow-400"], [class~="text-amber-300"], [class~="text-amber-400"]) { color: #ffbd63 !important; }
+.av-app :where([class~="border-indigo-500/50"], [class~="border-indigo-500/30"], [class~="border-purple-500/50"]) { border-color: rgba(214, 245, 106, .42) !important; }
+.av-app :where([class~="bg-indigo-600"], [class~="bg-purple-600"]) { background-color: #d6f56a !important; color: #17200c !important; }
+.av-app :where([class~="hover:bg-indigo-500"], [class~="hover:bg-purple-500"]):hover { background-color: #e2ff8a !important; color: #17200c !important; }
+.av-app :where([class~="bg-gradient-to-r"]) { background-image: linear-gradient(100deg, #d6f56a, #83cbd8) !important; }
+.av-app :where([class~="shadow-indigo-500/30"], [class~="shadow-indigo-500/20"], [class~="shadow-indigo-500/50"]) { box-shadow: 0 10px 24px rgba(0, 0, 0, .18) !important; }
+.av-app :where([class~="accent-indigo-500"]) { accent-color: #d6f56a !important; }
+.av-app :where([class~="focus:border-indigo-500"]):focus { border-color: #d6f56a !important; }
+.av-app :where([class~="hover:border-indigo-500/50"]):hover { border-color: #667b6c !important; }

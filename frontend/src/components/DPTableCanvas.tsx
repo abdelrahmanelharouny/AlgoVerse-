@@ -38,11 +38,13 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
     rowLabels,
     colLabels
 }) => {
+    const hostRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
+        const host = hostRef.current;
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!host || !canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
@@ -63,11 +65,11 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
 
-        ctx.fillStyle = '#020617';
+        ctx.fillStyle = '#0d1510';
         ctx.fillRect(0, 0, width, height);
 
         if (rows === 0 || cols === 0) {
-            ctx.fillStyle = '#94a3b8';
+            ctx.fillStyle = '#9aa99c';
             ctx.font = '14px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -107,9 +109,9 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
             if (cell.row < 0 || cell.row >= rows || cell.col < 0 || cell.col >= cols) continue;
             const x = originX + cell.col * cellSize;
             const y = originY + cell.row * cellSize;
-            ctx.fillStyle = 'rgba(14, 165, 233, 0.10)';
+            ctx.fillStyle = 'rgba(131, 203, 216, 0.12)';
             ctx.fillRect(x + 3, y + 3, cellSize - 6, cellSize - 6);
-            ctx.strokeStyle = '#0ea5e9';
+            ctx.strokeStyle = '#83cbd8';
             ctx.lineWidth = 2;
             ctx.setLineDash([4, 3]);
             ctx.strokeRect(x + 3, y + 3, cellSize - 6, cellSize - 6);
@@ -124,14 +126,14 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
                 const isActive = active?.row === row && active?.col === col;
 
                 ctx.fillStyle = isActive
-                    ? 'rgba(99, 102, 241, 0.32)'
-                    : value !== 0 ? '#1e293b' : '#0b1220';
+                    ? 'rgba(214, 245, 106, 0.25)'
+                    : value !== 0 ? '#1c2b22' : '#111b15';
                 ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
-                ctx.strokeStyle = isActive ? '#a5b4fc' : '#293548';
+                ctx.strokeStyle = isActive ? '#d6f56a' : '#2f4035';
                 ctx.lineWidth = isActive ? 2.5 : 1;
                 ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
 
-                ctx.fillStyle = isActive ? '#ffffff' : value !== 0 ? '#e2e8f0' : '#64748b';
+                ctx.fillStyle = isActive ? '#f2ffd0' : value !== 0 ? '#d7e1d7' : '#77877a';
                 ctx.font = isActive ? 'bold ' + Math.max(8, Math.round(cellSize * 0.34)) + 'px Inter, sans-serif' : Math.max(8, Math.round(cellSize * 0.3)) + 'px Inter, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -139,12 +141,24 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
             }
         }
 
+        // Keep the active cell in view while stepping through large tables.
+        if (active && active.row >= 0 && active.row < rows && active.col >= 0 && active.col < cols) {
+            const cellLeft = originX + active.col * cellSize;
+            const cellTop = originY + active.row * cellSize;
+            if (cellLeft < host.scrollLeft || cellLeft + cellSize > host.scrollLeft + host.clientWidth) {
+                host.scrollLeft = Math.max(0, cellLeft - host.clientWidth / 2);
+            }
+            if (cellTop < host.scrollTop || cellTop + cellSize > host.scrollTop + host.clientHeight) {
+                host.scrollTop = Math.max(0, cellTop - host.clientHeight / 2);
+            }
+        }
+
         // Draw a compact legend only when dependency information exists.
         if (dependencies.length > 0) {
-            ctx.fillStyle = '#38bdf8';
+            ctx.fillStyle = '#83cbd8';
             ctx.fillRect(PADDING, height - 12, 9, 9);
             ctx.fillStyle = '#94a3b8';
-            ctx.font = '10px Inter, sans-serif';
+            ctx.font = '9px Inter, sans-serif';
             ctx.textAlign = 'left';
             ctx.fillText('Dependency cells', PADDING + 14, height - 7);
         }
@@ -152,7 +166,8 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
 
     return (
         <motion.div
-            className="max-w-full overflow-auto bg-slate-950 rounded-xl p-4 border border-slate-800"
+            ref={hostRef}
+            className="max-h-[68vh] max-w-full overflow-auto rounded-xl border border-[#33453a] bg-[#0d1510] p-3"
             initial={{ opacity: 0, scale: 0.985 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.18 }}
@@ -161,7 +176,7 @@ const DPTableCanvas: React.FC<DPTableCanvasProps> = ({
                 ref={canvasRef}
                 className="mx-auto block"
                 role="img"
-                aria-label="Dynamic programming table. The active cell and its dependencies are highlighted."
+                aria-label={"Dynamic programming table with " + data.length + " rows. The active cell and its dependencies are highlighted."}
                 style={{ imageRendering: 'crisp-edges' }}
             />
         </motion.div>

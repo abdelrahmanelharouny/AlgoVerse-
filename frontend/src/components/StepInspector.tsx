@@ -10,12 +10,12 @@ interface StepInspectorProps {
 }
 
 const stepTone: Record<string, string> = {
-    init: 'border-sky-500/30 bg-sky-500/10 text-sky-300',
-    highlight: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
-    update: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300',
-    pick: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-    reject: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
-    sort: 'border-violet-500/30 bg-violet-500/10 text-violet-300',
+    init: 'border-[#83cbd8]/30 bg-[#83cbd8]/10 text-[#83cbd8]',
+    highlight: 'border-[#ffbd63]/30 bg-[#ffbd63]/10 text-[#ffbd63]',
+    update: 'border-[#d6f56a]/30 bg-[#d6f56a]/10 text-[#d6f56a]',
+    pick: 'border-[#a9d98f]/30 bg-[#a9d98f]/10 text-[#b8e5a3]',
+    reject: 'border-[#ff8063]/30 bg-[#ff8063]/10 text-[#ff9b84]',
+    sort: 'border-[#c6a5f5]/30 bg-[#c6a5f5]/10 text-[#c6a5f5]',
     solution: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
     info: 'border-slate-700 bg-slate-800/70 text-slate-300'
 };
@@ -65,7 +65,7 @@ const StepInspector: React.FC<StepInspectorProps> = ({ step, stepIndex, totalSte
 
     if (!step) {
         return (
-            <div className="mx-6 mb-5 rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-500">
+            <div className="mx-4 mb-4 rounded-lg border border-[#33453a] bg-[#141d19] px-4 py-3 text-xs text-[#9aa79c]">
                 Press Play or Next Step to inspect the algorithm’s decisions.
             </div>
         );
@@ -78,7 +78,7 @@ const StepInspector: React.FC<StepInspectorProps> = ({ step, stepIndex, totalSte
             key={stepIndex}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mx-6 mb-5 rounded-xl border border-slate-800 bg-slate-900/90 p-4 shadow-xl"
+            className="mx-4 mb-4 rounded-lg border border-[#33453a] bg-[#141d19] p-4 shadow-[0_10px_30px_rgba(0,0,0,.12)]"
             aria-live="polite"
             aria-label={`Step ${stepIndex + 1} explanation`}
         >

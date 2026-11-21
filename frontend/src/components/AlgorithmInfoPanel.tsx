@@ -149,9 +149,9 @@ const AlgorithmInfoPanel: React.FC<AlgorithmInfoPanelProps> = ({
     };
 
     const typeColors = {
-        greedy: 'from-emerald-500 to-green-500',
-        dp: 'from-indigo-500 to-purple-500',
-        graph: 'from-blue-500 to-cyan-500'
+        greedy: 'border-[#b8d75a] bg-[#d6f56a]/10 text-[#d6f56a]',
+        dp: 'border-[#83cbd8] bg-[#83cbd8]/10 text-[#83cbd8]',
+        graph: 'border-[#ff8063] bg-[#ff8063]/10 text-[#ff9b84]'
     };
 
     return (
@@ -159,7 +159,7 @@ const AlgorithmInfoPanel: React.FC<AlgorithmInfoPanelProps> = ({
             {/* Algorithm Header */}
             <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
                 <div className="flex items-center gap-2 mb-2">
-                    <span className={`px-2 py-0.5 text-xs font-semibold rounded bg-gradient-to-r ${typeColors[info.type]} text-white`}>
+                    <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded border ${typeColors[info.type]}`}>
                         {info.type.toUpperCase()}
                     </span>
                 </div>
@@ -184,11 +184,11 @@ const AlgorithmInfoPanel: React.FC<AlgorithmInfoPanelProps> = ({
             </div>
 
             {/* Key Insight */}
-            <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-500/30 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-xs text-yellow-400 mb-1">
+            <div className="bg-[#1c2920] border border-[#66734a] rounded-lg p-3">
+                <div className="flex items-center gap-2 text-xs text-[#d6f56a] mb-1">
                     <Lightbulb size={12} /> Key Insight
                 </div>
-                <p className="text-sm text-yellow-100">{info.keyInsight}</p>
+                <p className="text-sm leading-relaxed text-[#dce5d8]">{info.keyInsight}</p>
             </div>
 
             {/* Current Step Description */}
