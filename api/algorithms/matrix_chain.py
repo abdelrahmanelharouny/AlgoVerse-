@@ -1,7 +1,7 @@
 from time import perf_counter
 from typing import List
 
-from from api.models import AlgorithmResult, MatrixChainInput, Metrics, Step, StepType
+from api.models import AlgorithmResult, MatrixChainInput, Metrics, Step, StepType
 
 
 def solve_matrix_chain_dp(data: MatrixChainInput) -> AlgorithmResult:
