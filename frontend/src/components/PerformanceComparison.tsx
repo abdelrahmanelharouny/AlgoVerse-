@@ -51,7 +51,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                                 {winner === 'dp' ? 'Dynamic Programming' : 'Greedy'} Found Better Solution
                             </div>
                             <div className="text-sm text-slate-300">
-                                {difference} units {objective === 'minimize' ? 'fewer' : 'more'} than the other approach ({percentOff}% relative difference)
+                                Difference: {difference} units ({percentOff}% relative difference)
                             </div>
                         </div>
                     </div>
