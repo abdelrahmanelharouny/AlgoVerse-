@@ -24,6 +24,8 @@ const Visualizer: React.FC = () => {
     const { algorithm } = useParams<{ algorithm: string }>();
     const [algoType, setAlgoType] = useState<AlgorithmType | null>(null);
     const [unsupportedReason, setUnsupportedReason] = useState<string | null>(null);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
     const [inputData, setInputData] = useState<any>(null);
     const [steps, setSteps] = useState<any[]>([]);
     const [speed, setSpeed] = useState(1);
@@ -58,7 +60,7 @@ const Visualizer: React.FC = () => {
             if (predictionMode && !showPredictionModal && index > 0 && Math.random() < 0.3) {
                 if (isPlaying) togglePlay();
 
-                generatePrediction(step);
+                generatePrediction(step, steps[index + 1]);
                 setShowPredictionModal(true);
             }
         }
@@ -67,13 +69,31 @@ const Visualizer: React.FC = () => {
     // Use the algorithm state hook to accumulate DP table and greedy decisions
     const algorithmState = useAlgorithmState(steps, currentStepIndex);
 
-    const generatePrediction = (_step: any) => {
-        const options = ["Update Value", "Highlight Node", "Swap Elements", "Complete"];
-        const correct = options[0];
-
+    const generatePrediction = (_currentStep: any, nextStep: any) => {
+        const optionByType: Record<string, string> = {
+            init: "Initialize State",
+            sort: "Sort Candidates",
+            highlight: "Highlight Candidate",
+            update: "Update State",
+            pick: "Accept Candidate",
+            reject: "Reject Candidate",
+            solution: "Finalize Solution",
+            info: "Explain Step"
+        };
+        const options = [
+            "Initialize State",
+            "Sort Candidates",
+            "Highlight Candidate",
+            "Update State",
+            "Accept Candidate",
+            "Reject Candidate",
+            "Finalize Solution",
+            "Explain Step"
+        ];
+        const correct = optionByType[nextStep?.type] ?? "Finalize Solution";
         setPredictionQuestion({
-            q: `What will be the next operation at step ${currentStepIndex + 2}?`,
-            options: options.sort(() => Math.random() - 0.5),
+            q: "What kind of operation will the algorithm perform next?",
+            options: [...options].sort(() => Math.random() - 0.5),
             answer: correct
         });
         setCorrectPrediction(null);
@@ -149,6 +169,9 @@ const Visualizer: React.FC = () => {
     // Initialize Algorithm Type & Data
     useEffect(() => {
         if (!algorithm) return;
+        setLoadError(null);
+        setSteps([]);
+        setIsLoading(false);
 
         let type: AlgorithmType | null = null;
         let defaultInput: any = null;
@@ -296,6 +319,9 @@ const Visualizer: React.FC = () => {
     }, [algorithm]);
 
     const fetchSolution = async (type: AlgorithmType, input: any) => {
+        setIsLoading(true);
+        setLoadError(null);
+        setSteps([]);
         try {
             let result;
             if (type === AlgorithmType.FRACTIONAL_KNAPSACK) {
@@ -330,12 +356,18 @@ const Visualizer: React.FC = () => {
                 result = await api.solveRodCutting(input);
             }
 
-            if (result) {
-                setSteps(result.steps);
-                setCurrentStepIndex(-1);
+            if (!result) {
+                throw new Error("No executable solver is registered for this algorithm.");
             }
-        } catch (e) {
-            console.error("Failed to solve", e);
+            setSteps(result.steps);
+            setCurrentStepIndex(-1);
+            setHasCompleted(false);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to load this algorithm trace.";
+            setLoadError(message);
+            console.error("Failed to solve algorithm", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -385,6 +417,8 @@ const Visualizer: React.FC = () => {
                     graph={inputData?.graph || {}}
                     currentStepData={currentStep?.data || {}}
                     visitedNodes={(currentStep?.data as any)?.visited || []}
+                    startNode={inputData?.start_node}
+                    directed={algoType === AlgorithmType.DIJKSTRA}
                 />;
             case AlgorithmType.HUFFMAN:
                 return <HuffmanCanvas
@@ -515,7 +549,18 @@ const Visualizer: React.FC = () => {
                 </div>
 
                 <div className="flex-1 p-8 overflow-auto flex items-center justify-center relative z-0">
-                    {renderCanvas()}
+                    {isLoading ? (
+                        <div className="flex items-center gap-3 text-sm text-slate-400" role="status">
+                            <span className="h-4 w-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+                            Building algorithm trace…
+                        </div>
+                    ) : loadError ? (
+                        <div className="max-w-xl rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-center" role="alert">
+                            <p className="font-semibold text-rose-300">Could not run this algorithm</p>
+                            <p className="mt-2 text-sm text-rose-200/80">{loadError}</p>
+                            {inputData && algoType && <button onClick={() => fetchSolution(algoType, inputData)} className="mt-4 rounded-lg bg-rose-500/20 px-4 py-2 text-sm font-semibold text-rose-200 hover:bg-rose-500/30">Try again</button>}
+                        </div>
+                    ) : renderCanvas()}
                 </div>
 
                 <StepInspector
