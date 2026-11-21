@@ -144,7 +144,6 @@ const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepInde
         }
 
         const widthCache = new Map<string, number>();
-        const depthCache = new Map<string, number>();
         const measuring = new Set<string>();
 
         const treeWidth = (id: string | number): number => {

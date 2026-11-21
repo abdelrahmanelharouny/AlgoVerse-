@@ -58,12 +58,15 @@
 .av-app :where([class~="text-slate-600"]) { color: #68766d; }
 .av-app :where([class~="text-indigo-300"], [class~="text-indigo-400"], [class~="text-indigo-500"], [class~="text-purple-300"], [class~="text-purple-400"], [class~="text-violet-400"]) { color: #d6f56a !important; }
 .av-app :where([class~="text-emerald-300"], [class~="text-emerald-400"], [class~="text-green-400"]) { color: #d6f56a !important; }
+.av-app :where([class~="bg-emerald-500/10"], [class~="bg-emerald-500/20"], [class~="bg-green-500/10"], [class~="bg-green-500/20"]) { background-color: rgba(214, 245, 106, .08) !important; }
+.av-app :where([class~="border-emerald-500/20"], [class~="border-emerald-500/30"], [class~="border-green-500/30"]) { border-color: rgba(214, 245, 106, .28) !important; }
 .av-app :where([class~="text-cyan-400"], [class~="text-blue-400"]) { color: #83cbd8 !important; }
 .av-app :where([class~="text-yellow-300"], [class~="text-yellow-400"], [class~="text-amber-300"], [class~="text-amber-400"]) { color: #ffbd63 !important; }
 .av-app :where([class~="border-indigo-500/50"], [class~="border-indigo-500/30"], [class~="border-purple-500/50"]) { border-color: rgba(214, 245, 106, .42) !important; }
 .av-app :where([class~="bg-indigo-600"], [class~="bg-purple-600"]) { background-color: #d6f56a !important; color: #17200c !important; }
 .av-app :where([class~="hover:bg-indigo-500"], [class~="hover:bg-purple-500"]):hover { background-color: #e2ff8a !important; color: #17200c !important; }
-.av-app :where([class~="bg-gradient-to-r"]) { background-image: linear-gradient(100deg, rgba(214, 245, 106, .15), rgba(131, 203, 216, .07)) !important; }
+.av-app :where([class~="bg-gradient-to-r"]:not([class~="bg-clip-text"])) { background-image: linear-gradient(100deg, rgba(214, 245, 106, .15), rgba(131, 203, 216, .07)) !important; }
+.av-app :where([class~="bg-gradient-to-r"][class~="bg-clip-text"]) { background-image: linear-gradient(100deg, #d6f56a, #83cbd8) !important; }
 .av-app :where([class~="bg-gradient-to-r"][class~="h-2"], [class~="bg-gradient-to-r"][class~="h-3"], [class~="bg-gradient-to-r"][class~="h-4"]) { background-image: linear-gradient(100deg, #d6f56a, #83cbd8) !important; }
 .av-app :where([class~="shadow-indigo-500/30"], [class~="shadow-indigo-500/20"], [class~="shadow-indigo-500/50"]) { box-shadow: 0 10px 24px rgba(0, 0, 0, .18) !important; }
 .av-app :where([class~="accent-indigo-500"]) { accent-color: #d6f56a !important; }
