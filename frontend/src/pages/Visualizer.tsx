@@ -7,7 +7,10 @@ import { useAlgorithmState } from '../hooks/useAlgorithmState';
 import useSound from '../hooks/useSound';
 import { api } from '../utils/api';
 import { AlgorithmType } from '../types';
-import type { AlgorithmResult } from '../types';
+import type {
+    AlgorithmResult, Step, KnapsackInput, CoinChangeInput, DijkstraInput,
+    HuffmanInput, IntervalSchedulingInput, LCSInput, MatrixChainInput
+} from '../types';
 import CodeExport from '../components/CodeExport';
 import PredictionModal from '../components/PredictionModal';
 import GraphCanvas from '../components/GraphCanvas';
@@ -22,14 +25,25 @@ import VisualizerInputPresets from '../components/VisualizerInputPresets';
 import confetti from 'canvas-confetti';
 import { SkipForward } from 'lucide-react';
 
+type AlgorithmInput =
+    | KnapsackInput
+    | CoinChangeInput
+    | DijkstraInput
+    | HuffmanInput
+    | IntervalSchedulingInput
+    | LCSInput
+    | MatrixChainInput
+    | { sequence: number[] }
+    | { length: number; prices: number[] };
+
 const Visualizer: React.FC = () => {
     const { algorithm } = useParams<{ algorithm: string }>();
     const [algoType, setAlgoType] = useState<AlgorithmType | null>(null);
     const [unsupportedReason, setUnsupportedReason] = useState<string | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [inputData, setInputData] = useState<any>(null);
-    const [steps, setSteps] = useState<any[]>([]);
+    const [inputData, setInputData] = useState<AlgorithmInput | null>(null);
+    const [steps, setSteps] = useState<Step[]>([]);
     const [algorithmResult, setAlgorithmResult] = useState<AlgorithmResult | null>(null);
     const [speed, setSpeed] = useState(1);
     const [showCode, setShowCode] = useState(true);
@@ -169,43 +183,43 @@ const Visualizer: React.FC = () => {
         }
     }, [currentStepIndex, steps.length, hasCompleted, soundEnabled, playSuccess]);
 
-    const fetchSolution = useCallback(async (type: AlgorithmType, input: any) => {
+    const fetchSolution = useCallback(async (type: AlgorithmType, input: AlgorithmInput) => {
         setIsLoading(true);
         setLoadError(null);
         setSteps([]);
         setAlgorithmResult(null);
         try {
-            let result;
+            let result: AlgorithmResult | null = null;
             if (type === AlgorithmType.FRACTIONAL_KNAPSACK) {
-                result = await api.solveFractionalKnapsack(input);
+                result = await api.solveFractionalKnapsack(input as KnapsackInput);
             } else if (type === AlgorithmType.LCS) {
-                result = await api.solveLCS(input);
+                result = await api.solveLCS(input as LCSInput);
             } else if (type === AlgorithmType.DIJKSTRA) {
-                result = await api.solveDijkstra(input);
+                result = await api.solveDijkstra(input as DijkstraInput);
             } else if (type === AlgorithmType.PRIMS) {
-                result = await api.solvePrims(input);
+                result = await api.solvePrims(input as DijkstraInput);
             } else if (type === AlgorithmType.KRUSKALS) {
-                result = await api.solveKruskals(input);
+                result = await api.solveKruskals(input as DijkstraInput);
             } else if (type === AlgorithmType.KNAPSACK || type === AlgorithmType.KNAPSACK_DP) {
-                result = await api.solveKnapsack(AlgorithmType.DP, input);
+                result = await api.solveKnapsack(AlgorithmType.DP, input as KnapsackInput);
             } else if (type === AlgorithmType.GREEDY || type === AlgorithmType.KNAPSACK_GREEDY) {
-                result = await api.solveKnapsack(AlgorithmType.GREEDY, input);
+                result = await api.solveKnapsack(AlgorithmType.GREEDY, input as KnapsackInput);
             } else if (type === AlgorithmType.MATRIX_CHAIN) {
-                result = await api.solveMatrixChain(type, input);
+                result = await api.solveMatrixChain(type, input as MatrixChainInput);
             } else if (type === AlgorithmType.HUFFMAN) {
-                result = await api.solveHuffman(input);
+                result = await api.solveHuffman(input as HuffmanInput);
             } else if (type === AlgorithmType.INTERVAL_SCHEDULING) {
-                result = await api.solveIntervalScheduling(AlgorithmType.GREEDY, input);
+                result = await api.solveIntervalScheduling(AlgorithmType.GREEDY, input as IntervalSchedulingInput);
             } else if (type === AlgorithmType.COIN_CHANGE_DP) {
-                result = await api.solveCoinChange(AlgorithmType.DP, input);
+                result = await api.solveCoinChange(AlgorithmType.DP, input as CoinChangeInput);
             } else if (type === AlgorithmType.COIN_CHANGE_GREEDY) {
-                result = await api.solveCoinChange(AlgorithmType.GREEDY, input);
+                result = await api.solveCoinChange(AlgorithmType.GREEDY, input as CoinChangeInput);
             } else if (type === AlgorithmType.EDIT_DISTANCE) {
-                result = await api.solveEditDistance(input);
+                result = await api.solveEditDistance(input as LCSInput);
             } else if (type === AlgorithmType.LIS) {
-                result = await api.solveLIS(input);
+                result = await api.solveLIS(input as { sequence: number[] });
             } else if (type === AlgorithmType.ROD_CUTTING) {
-                result = await api.solveRodCutting(input);
+                result = await api.solveRodCutting(input as { length: number; prices: number[] });
             }
 
             if (!result) {
@@ -234,7 +248,7 @@ const Visualizer: React.FC = () => {
         setIsLoading(false);
 
         let type: AlgorithmType | null = null;
-        let defaultInput: any = null;
+        let defaultInput: AlgorithmInput | null = null;
         setUnsupportedReason(null);
 
         switch (algorithm) {
