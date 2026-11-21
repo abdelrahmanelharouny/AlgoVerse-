@@ -4,8 +4,11 @@ import { Clock, HardDrive, Info, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AlgorithmInfoPanelProps {
-    algorithm: string;
+    algorithmName: string;
+    algorithmId: string;
     currentStep?: Step;
+    stepIndex: number;
+    totalSteps: number;
 }
 
 // Algorithm metadata
