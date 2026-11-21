@@ -10,10 +10,11 @@ interface Interval {
 
 interface IntervalInputBuilderProps {
     onInputChange: (intervals: Interval[]) => void;
+    initialData?: Array<{ id: string | number; start: number; end: number }>;
 }
 
-const IntervalInputBuilder: React.FC<IntervalInputBuilderProps> = ({ onInputChange }) => {
-    const [intervals, setIntervals] = useState<Interval[]>([
+const IntervalInputBuilder: React.FC<IntervalInputBuilderProps> = ({ onInputChange, initialData }) => {
+    const [intervals, setIntervals] = useState<Interval[]>(() => initialData?.map(interval => ({ ...interval, id: String(interval.id) })) ?? [
         { id: '1', start: 1, end: 4 },
         { id: '2', start: 3, end: 5 },
         { id: '3', start: 0, end: 6 },
