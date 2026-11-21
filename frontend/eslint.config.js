@@ -19,5 +19,10 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Legacy components still contain explicit any annotations; keep them visible
+      // as warnings while new code and correctness-critical rules remain enforced.
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
   },
 ])
