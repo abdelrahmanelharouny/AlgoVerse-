@@ -234,7 +234,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         : new Set(Object.entries(graph).flatMap(([from, neighbors]) => Object.keys(neighbors).map(to => [from, to].sort().join('::')))).size;
 
     return (
-        <div ref={hostRef className="relative w-full min-w-0 rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
+        <div ref={hostRef} className="relative w-full min-w-0 rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
             <canvas
                 ref={canvasRef}
                 className="block w-full"
