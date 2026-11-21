@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
     Target, Search, Filter, Activity, Brain, Trophy,
@@ -58,13 +58,8 @@ const Problems = () => {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [showFilters, setShowFilters] = useState(false);
 
-    const [completed, setCompleted] = useState<Set<string>>(new Set());
-    const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
-
-    useEffect(() => {
-        setCompleted(getCompletedAlgorithms());
-        setBookmarks(getBookmarks());
-    }, []);
+    const [completed, setCompleted] = useState<Set<string>>(getCompletedAlgorithms);
+    const [bookmarks, setBookmarks] = useState<Set<string>>(getBookmarks);
 
     const toggleBookmark = (id: string) => {
         setBookmarks(prev => {
