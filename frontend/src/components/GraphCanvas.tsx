@@ -281,25 +281,27 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     }, [graph, nodePositions, currentStepData, visitedNodes, width, height, directed, startNode, mstEdgeKeys, pathEdgeKeys, distances]);
 
     return (
-        <div ref={hostRef} className="av-visual-canvas relative w-full min-w-0 overflow-hidden rounded-xl border border-[#344b67] bg-[#101c2d]">
+        <div ref={hostRef} className="av-visual-canvas w-full min-w-0 overflow-hidden rounded-xl border border-[#344b67] bg-[#101c2d]">
+            <div className="av-graph-meta">
+                <div className="av-graph-meta__legend" role="list" aria-label="Graph visualization legend">
+                    <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#d5ef79' }} />Start</span>
+                    <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#ed6247' }} />Current</span>
+                    <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#326ca2', border: '1px solid #8bc7ff' }} />Visited</span>
+                    <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#f2b75c' }} />Checking</span>
+                    {directed
+                        ? <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#78b8ff' }} />Shortest-path tree</span>
+                        : <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#d5ef79' }} />Chosen edge</span>}
+                </div>
+                <span className="av-graph-meta__count">
+                    {Object.keys(graph).length} nodes / {edgeCount} {directed ? 'arcs' : 'edges'}
+                </span>
+            </div>
             <canvas
                 ref={canvasRef}
                 className="block w-full"
                 role="img"
                 aria-label={'Graph visualization with ' + Object.keys(graph).length + ' nodes and ' + edgeCount + ' ' + (directed ? 'directed edges' : 'edges') + '. Active algorithm states are highlighted.'}
             />
-            <div className="absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1.5 rounded-md border border-[#344b67] bg-[#17263a]/95 px-3 py-2 text-[9px] text-[#c6d2df] backdrop-blur-sm">
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d5ef79]" />Start</span>
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#ed6247]" />Current</span>
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#78b8ff]" />Visited</span>
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#f2b75c]" />Checking</span>
-                {directed
-                    ? <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#78b8ff]" />Shortest-path tree</span>
-                    : <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#d5ef79] ring-1 ring-[#d6f56a]/40" />Chosen edge</span>}
-            </div>
-            <div className="absolute right-3 top-3 rounded-md border border-[#344b67] bg-[#17263a]/95 px-3 py-1.5 font-mono text-[9px] text-[#b7c5d4] backdrop-blur-sm">
-                {Object.keys(graph).length} nodes / {edgeCount} edges
-            </div>
         </div>
     );
 };
