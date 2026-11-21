@@ -3,7 +3,7 @@ from __future__ import annotations
 from time import perf_counter
 from typing import Any, Dict, List
 
-from from api.models import AlgorithmResult, KnapsackInput, Metrics, Step, StepType
+from api.models import AlgorithmResult, KnapsackInput, Metrics, Step, StepType
 
 
 def _validate(data: KnapsackInput) -> None:
