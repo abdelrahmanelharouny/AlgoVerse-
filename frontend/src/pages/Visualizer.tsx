@@ -8,7 +8,8 @@ import useSound from '../hooks/useSound';
 import { api } from '../utils/api';
 import { AlgorithmType } from '../types';
 import type {
-    AlgorithmResult, Step, KnapsackItem, CoinChangeInput, DijkstraInput,
+    AlgorithmResult, Step, KnapsackItem, KnapsackInput, CoinChangeInput, DijkstraInput,
+    IntervalSchedulingInput,
     HuffmanInput, LCSInput, MatrixChainInput
 } from '../types';
 import CodeExport from '../components/CodeExport';
