@@ -1,9 +1,27 @@
 
 import React, { useEffect, useRef } from 'react';
+import type { Step } from '../types';
+
+interface HuffmanNodeInput {
+    id: string | number;
+    char: string | null;
+    freq: number;
+}
+
+interface HuffmanStepData {
+    nodes?: HuffmanNodeInput[];
+    left_id?: string | number;
+    right_id?: string | number;
+    new_node_id?: string | number;
+    freq?: number;
+    left_child_id?: string | number;
+    right_child_id?: string | number;
+    codes?: Record<string, string>;
+}
 
 interface HuffmanCanvasProps {
-    currentStepData: any;
-    allSteps: any[]; // To reconstruct state if needed, but currentStepData might be enough if we track state in Visualizer
+    currentStepData: HuffmanStepData;
+    allSteps: Step[];
     stepIndex: number;
 }
 
@@ -90,11 +108,12 @@ const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepInde
             const step = steps[k];
             if (!step) continue;
 
-            if (step.type === 'init' && step.data.nodes) {
+            const stepData = (step.data ?? {}) as HuffmanStepData;
+            if (step.type === 'init' && stepData.nodes) {
                 // Reset
                 nodes = {};
                 rootIds = [];
-                step.data.nodes.forEach((n: any) => {
+                stepData.nodes.forEach((n: HuffmanNodeInput) => {
                     nodes[n.id] = {
                         id: n.id,
                         char: n.char,
@@ -105,8 +124,8 @@ const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepInde
                     };
                     rootIds.push(n.id);
                 });
-            } else if (step.type === 'update' && step.data.new_node_id) {
-                const { new_node_id, freq, left_child_id, right_child_id } = step.data;
+            } else if (step.type === 'update' && stepData.new_node_id !== undefined) {
+                const { new_node_id, freq, left_child_id, right_child_id } = stepData;
 
                 // Create new internal node
                 nodes[new_node_id] = {
@@ -127,7 +146,7 @@ const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepInde
                 // Update parent pointers
                 if (nodes[left_child_id]) nodes[left_child_id].parentId = new_node_id;
                 if (nodes[right_child_id]) nodes[right_child_id].parentId = new_node_id;
-            } else if (step.type === 'solution' && step.data.codes) {
+            } else if (step.type === 'solution' && stepData.codes) {
                 // codes = step.data.codes; // Unused for now
             }
         }
