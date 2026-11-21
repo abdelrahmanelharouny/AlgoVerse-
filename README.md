@@ -103,13 +103,14 @@ The API is exposed on `http://localhost:8000`.
 ## Tests and quality checks
 
 ```bash
+python scripts/check_algorithm_parity.py
 python -m pytest -q
 cd frontend
 npm run lint
 npm run build
 ```
 
-GitHub Actions runs backend regression tests and frontend lint/build checks on pushes and pull requests.
+GitHub Actions checks that the API and Docker algorithm implementations remain identical, runs backend regression tests, and runs frontend lint/build checks on pushes and pull requests.
 
 ## Configuration
 
