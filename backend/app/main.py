@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy, solve_fractional_knapsack
 from app.algorithms.coin_change import solve_coin_change_dp, solve_coin_change_greedy
 from app.algorithms.interval_scheduling import solve_interval_scheduling_greedy, solve_interval_scheduling_dp
@@ -19,6 +20,11 @@ from app.models import (
 )
 
 app = FastAPI(title="Algorithm Visualizer API", root_path="/api")
+
+@app.exception_handler(ValueError)
+async def handle_algorithm_input_error(request: Request, exc: ValueError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
 
 app.add_middleware(
     CORSMiddleware,
