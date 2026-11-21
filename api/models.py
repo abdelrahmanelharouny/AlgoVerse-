@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class AlgorithmType(str, Enum):
@@ -53,8 +53,9 @@ class KnapsackInput(BaseModel):
     capacity: int = Field(ge=0, le=300)
     items: List[KnapsackItem] = Field(max_length=50)
 
-    @validator("items")
-    def unique_item_ids(cls, items):
+    @field_validator("items")
+    @classmethod
+    def unique_item_ids(cls, items: List[KnapsackItem]) -> List[KnapsackItem]:
         ids = [item.id for item in items]
         if len(ids) != len(set(ids)):
             raise ValueError("Item IDs must be unique")
@@ -65,8 +66,9 @@ class CoinChangeInput(BaseModel):
     amount: int = Field(ge=0, le=500)
     coins: List[int] = Field(min_length=1, max_length=100)
 
-    @validator("coins")
-    def positive_unique_coins(cls, coins):
+    @field_validator("coins")
+    @classmethod
+    def positive_unique_coins(cls, coins: List[int]) -> List[int]:
         if any(coin <= 0 for coin in coins):
             raise ValueError("Coin denominations must be positive integers")
         if len(coins) != len(set(coins)):
@@ -79,9 +81,10 @@ class Interval(BaseModel):
     start: float
     end: float
 
-    @validator("end")
-    def end_not_before_start(cls, end, values):
-        start = values.get("start")
+    @field_validator("end")
+    @classmethod
+    def end_not_before_start(cls, end: float, info: ValidationInfo) -> float:
+        start = info.data.get("start")
         if start is not None and end < start:
             raise ValueError("Interval end must be greater than or equal to start")
         return end
@@ -94,8 +97,9 @@ class IntervalSchedulingInput(BaseModel):
 class MatrixChainInput(BaseModel):
     dimensions: List[int] = Field(min_length=2, max_length=16)
 
-    @validator("dimensions")
-    def positive_dimensions(cls, dimensions):
+    @field_validator("dimensions")
+    @classmethod
+    def positive_dimensions(cls, dimensions: List[int]) -> List[int]:
         if any(dimension <= 0 for dimension in dimensions):
             raise ValueError("Matrix dimensions must be positive")
         return dimensions
@@ -114,8 +118,9 @@ class DijkstraInput(BaseModel):
     graph: Dict[str, Dict[str, float]]
     start_node: str = ""
 
-    @validator("graph")
-    def valid_graph_references(cls, graph):
+    @field_validator("graph")
+    @classmethod
+    def valid_graph_references(cls, graph: Dict[str, Dict[str, float]]) -> Dict[str, Dict[str, float]]:
         if len(graph) > 100:
             raise ValueError("Graph cannot contain more than 100 nodes")
         nodes = set(graph)
@@ -141,8 +146,9 @@ class RodCuttingInput(BaseModel):
     length: int = Field(ge=0, le=200)
     prices: List[float] = Field(max_length=10_000)
 
-    @validator("prices")
-    def prices_required_for_positive_length(cls, prices, values):
-        if values.get("length", 0) > 0 and not prices:
+    @field_validator("prices")
+    @classmethod
+    def prices_required_for_positive_length(cls, prices: List[float], info: ValidationInfo) -> List[float]:
+        if info.data.get("length", 0) > 0 and not prices:
             raise ValueError("At least one piece price is required for a positive rod length")
         return prices
