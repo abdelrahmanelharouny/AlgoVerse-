@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Play, Package, Coins, Calendar, Trophy } from 'lucide-react';
@@ -11,6 +11,7 @@ import HintPanel from '../components/HintPanel';
 import ChallengeResults from '../components/ChallengeResults';
 import type { KnapsackInput, CoinChangeInput, IntervalSchedulingInput } from '../types';
 import { api } from '../utils/api';
+import { AlgorithmType } from '../types';
 
 const ChallengeDetail = () => {
     const { challengeId } = useParams<{ challengeId: string }>();
@@ -28,11 +29,36 @@ const ChallengeDetail = () => {
     const [coinChangeInput, setCoinChangeInput] = useState<CoinChangeInput | null>(null);
     const [intervalInput, setIntervalInput] = useState<IntervalSchedulingInput | null>(null);
     const [hintsUsed, setHintsUsed] = useState(0);
+    const [answerGuess, setAnswerGuess] = useState('');
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const [showResults, setShowResults] = useState(false);
     const [testResults, setTestResults] = useState<any[]>([]);
     const [passed, setPassed] = useState(false);
     const [stars, setStars] = useState(0);
     const [loading, setLoading] = useState(false);
+
+    // Stable callbacks prevent the input builders' initialization effects from
+    // firing again on every parent render.
+    const handleKnapsackInputChange = useCallback((items: KnapsackInput['items'], capacity: number) => {
+        setKnapsackInput({ items, capacity });
+    }, []);
+    const handleCoinChangeInputChange = useCallback((coins: number[], amount: number) => {
+        setCoinChangeInput({ coins, amount });
+    }, []);
+    const handleIntervalInputChange = useCallback((intervals: IntervalSchedulingInput['intervals']) => {
+        setIntervalInput({ intervals });
+    }, []);
+
+    useEffect(() => {
+        setHintsUsed(0);
+        setAnswerGuess('');
+        setSubmitError(null);
+        setShowResults(false);
+        setTestResults([]);
+        setPassed(false);
+        setStars(0);
+        setLoading(false);
+    }, [challengeId]);
 
     if (!challenge) {
         return (
@@ -73,28 +99,6 @@ const ChallengeDetail = () => {
         }
     };
 
-    const validateTestCase = async (testCase: any, userInput: any): Promise<{ passed: boolean; actual: number }> => {
-        try {
-            let result;
-
-            if (challenge.algorithmType === 'knapsack') {
-                result = await api.solveKnapsack(challenge.dpType, userInput);
-            } else if (challenge.algorithmType === 'coin-change') {
-                result = await api.solveCoinChange(challenge.dpType, userInput);
-            } else {
-                result = await api.solveIntervalScheduling(challenge.dpType, userInput);
-            }
-
-            return {
-                passed: result.result_value === testCase.expectedValue,
-                actual: result.result_value
-            };
-        } catch (error) {
-            console.error('Validation error:', error);
-            return { passed: false, actual: -1 };
-        }
-    };
-
     const calculateStars = (allPassed: boolean, hintsUsedCount: number): number => {
         if (!allPassed) return 0;
 
@@ -108,34 +112,42 @@ const ChallengeDetail = () => {
 
     const handleSubmit = async () => {
         if (!challengeId) return;
-
         const currentInput =
             challenge.algorithmType === 'knapsack' ? knapsackInput :
                 challenge.algorithmType === 'coin-change' ? coinChangeInput :
                     intervalInput;
 
         if (!currentInput) {
-            alert('Please configure the input first!');
+            setSubmitError('Configure the input before submitting.');
+            return;
+        }
+        if (!answerGuess.trim() || !Number.isFinite(Number(answerGuess))) {
+            setSubmitError('Enter your predicted optimal result first.');
             return;
         }
 
         setLoading(true);
+        setSubmitError(null);
         recordAttempt(challengeId);
 
         try {
-            const results = await Promise.all(
-                challenge.testCases.map(async (testCase) => {
-                    const validation = await validateTestCase(testCase, currentInput);
-                    return {
-                        name: testCase.name,
-                        passed: validation.passed,
-                        expected: testCase.expectedValue,
-                        actual: validation.actual
-                    };
-                })
-            );
+            // The learner predicts the optimum. DP supplies the trusted reference
+            // result for the exact custom input they configured.
+            const result = challenge.algorithmType === 'knapsack'
+                ? await api.solveKnapsack(AlgorithmType.DP, currentInput as KnapsackInput)
+                : challenge.algorithmType === 'coin-change'
+                    ? await api.solveCoinChange(AlgorithmType.DP, currentInput as CoinChangeInput)
+                    : await api.solveIntervalScheduling(AlgorithmType.DP, currentInput as IntervalSchedulingInput);
 
-            const allPassed = results.every(r => r.passed);
+            const expected = Number(answerGuess);
+            const actual = result.result_value;
+            const allPassed = expected === actual;
+            const results = [{
+                name: 'Predicted optimal result',
+                passed: allPassed,
+                expected,
+                actual
+            }];
             const earnedStars = calculateStars(allPassed, hintsUsed);
 
             setTestResults(results);
@@ -143,13 +155,14 @@ const ChallengeDetail = () => {
             setStars(earnedStars);
 
             if (allPassed) {
-                completeChallenge(challengeId, challenge.optimalValue, earnedStars, hintsUsed);
+                // bestScore represents the best star score, not a raw objective
+                // whose direction differs between maximize/minimize problems.
+                completeChallenge(challengeId, earnedStars, earnedStars, hintsUsed);
             }
-
             setShowResults(true);
         } catch (error) {
-            console.error('Submit error:', error);
-            alert('An error occurred while validating your solution. Please try again.');
+            const message = error instanceof Error ? error.message : 'Unable to evaluate this input.';
+            setSubmitError(message);
         } finally {
             setLoading(false);
         }
@@ -160,6 +173,7 @@ const ChallengeDetail = () => {
         setTestResults([]);
         setPassed(false);
         setStars(0);
+        setSubmitError(null);
     };
 
     const handleNextChallenge = () => {
@@ -167,7 +181,6 @@ const ChallengeDetail = () => {
         if (currentIndex < CHALLENGES.length - 1) {
             const nextChallenge = CHALLENGES[currentIndex + 1];
             navigate(`/challenge/${nextChallenge.id}`);
-            window.location.reload(); // Reset state
         } else {
             navigate('/challenge');
         }
@@ -224,35 +237,60 @@ const ChallengeDetail = () => {
                 {/* Left: Input Builder */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                        <h3 className="text-xl font-bold text-white mb-4">Configure Input</h3>
+                        <h3 className="text-xl font-bold text-white mb-2">Configure Your Problem</h3>
+                        <p className="text-sm text-slate-500 mb-4">Change the instance, predict the optimal objective, then inspect the reference result.</p>
 
                         {challenge.algorithmType === 'knapsack' && (
-                            <KnapsackInputBuilder onInputChange={(items, capacity) => {
-                                setKnapsackInput({ items, capacity });
-                            }} />
+                            <KnapsackInputBuilder
+                                key={challenge.id}
+                                initialData={challenge.testCases[0]?.input as KnapsackInput}
+                                onInputChange={handleKnapsackInputChange}
+                            />
                         )}
 
                         {challenge.algorithmType === 'coin-change' && (
-                            <CoinChangeInputBuilder onInputChange={(coins, amount) => {
-                                setCoinChangeInput({ coins, amount });
-                            }} />
+                            <CoinChangeInputBuilder
+                                key={challenge.id}
+                                initialData={challenge.testCases[0]?.input as CoinChangeInput}
+                                onInputChange={handleCoinChangeInputChange}
+                            />
                         )}
 
                         {challenge.algorithmType === 'interval-scheduling' && (
-                            <IntervalInputBuilder onInputChange={(intervals) => {
-                                setIntervalInput({ intervals });
-                            }} />
+                            <IntervalInputBuilder
+                                key={challenge.id}
+                                initialData={(challenge.testCases[0]?.input as IntervalSchedulingInput | undefined)?.intervals}
+                                onInputChange={handleIntervalInputChange}
+                            />
                         )}
+                    </div>
+
+                    <div className="bg-slate-900 border border-indigo-500/20 rounded-xl p-6 space-y-3">
+                        <label htmlFor="answer-guess" className="block text-sm font-semibold text-slate-200">
+                            Predict the optimal result
+                        </label>
+                        <p className="text-xs text-slate-500">
+                            Calculate the best possible answer from your configured input before revealing the reference solution.
+                        </p>
+                        <input
+                            id="answer-guess"
+                            type="number"
+                            value={answerGuess}
+                            onChange={(event) => setAnswerGuess(event.target.value)}
+                            placeholder="Enter your predicted value"
+                            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 font-mono text-white outline-none focus:border-indigo-500"
+                        />
+                        {submitError && <p role="alert" className="text-sm text-rose-400">{submitError}</p>}
                     </div>
 
                     {/* Submit Button */}
                     <button
                         onClick={handleSubmit}
-                        disabled={loading || (!knapsackInput && !coinChangeInput && !intervalInput)}
+                        disabled={loading || (!knapsackInput && !coinChangeInput && !intervalInput) || !answerGuess.trim()}
                         className="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 text-white font-bold text-lg rounded-xl transition-colors shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-3"
                     >
                         <Play size={24} />
-                        {loading ? 'Validating...' : 'Submit Solution'}
+                        {loading ? 'Checking prediction...' : 'Check My Prediction'}
                     </button>
                 </div>
 

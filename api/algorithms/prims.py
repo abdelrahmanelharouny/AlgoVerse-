@@ -1,107 +1,59 @@
 import heapq
-import time
-from typing import Dict, List, Any
-from api.models import Step, StepType, AlgorithmResult, Metrics, DijkstraInput
+from time import perf_counter
+from typing import Dict, List
 
-# Prim's uses the same input structure as Dijkstra (Graph + Start Node)
+from api.algorithms.graph_utils import as_undirected_adjacency, undirected_edges
+from api.models import AlgorithmResult, DijkstraInput, Metrics, Step, StepType
+
+
 def solve_prims(data: DijkstraInput) -> AlgorithmResult:
-    start_time = time.time()
-    steps = []
-    
-    graph = data.graph
-    start_node = data.start_node
-    
-    # Priority Queue: (weight, from_node, to_node)
-    # We start with edges from the start node
-    pq = []
-    
-    visited = set([start_node])
-    mst_edges = []
-    mst_weight = 0
-    
-    steps.append(Step(
-        type=StepType.INIT,
-        description=f"Initialized Prim's Algorithm starting at {start_node}",
-        data={
-            "visited": list(visited),
-            "mst_edges": [],
-            "graph": graph,
-            "start_node": start_node
-        }
-    ))
-    
-    # Add initial edges
-    if start_node in graph:
-        for neighbor, weight in graph[start_node].items():
-            heapq.heappush(pq, (weight, start_node, neighbor))
-            steps.append(Step(
-                type=StepType.HIGHLIGHT,
-                description=f"Added edge {start_node}->{neighbor} (weight {weight}) to PQ",
-                data={
-                     "current_node": start_node,
-                     "checking_neighbor": neighbor,
-                     "edge_weight": weight
-                }
-            ))
+    """Minimum spanning forest using Prim; disconnected components are handled explicitly."""
+    nodes, edges = undirected_edges(data.graph)
+    if not nodes:
+        return AlgorithmResult(steps=[Step(type=StepType.INFO, description="The graph is empty", data={})], result_value=0, selected_items=[], result_data={"mst_edges": [], "components_count": 0, "is_spanning_tree": False}, metrics=Metrics(time_taken=0, time_complexity="O(E log V)", space_complexity="O(V + E)", step_count=1, operation_count=0))
+    start = data.start_node or nodes[0]
+    if start not in nodes:
+        raise ValueError(f"Start node '{start}' does not exist in the graph")
+    adjacency = as_undirected_adjacency(nodes, edges)
+    started = perf_counter()
+    visited = set()
+    mst_edges: List[Dict[str, object]] = []
+    total_weight = 0.0
+    components = [start] + [node for node in nodes if node != start]
+    steps: List[Step] = [Step(type=StepType.INIT, description=f"Initialize Prim from node {start}; remaining components will be processed if needed", data={"visited": [], "mst_edges": [], "graph": data.graph, "start_node": start})]
+    operations = 0
 
-    while pq:
-        # Get smallest edge
-        weight, u, v = heapq.heappop(pq)
-        
-        # If v is already visited, skip (cycle)
-        if v in visited:
+    for component_start in components:
+        if component_start in visited:
             continue
-            
-        steps.append(Step(
-            type=StepType.PICK,
-            description=f"Selected edge {u}->{v} (weight {weight}) for MST",
-            data={
-                "u": u,
-                "v": v,
-                "weight": weight
-            }
-        ))
-        
-        # Add to MST
-        visited.add(v)
-        mst_edges.append({"u": u, "v": v, "weight": weight})
-        mst_weight += weight
-        
-        steps.append(Step(
-            type=StepType.UPDATE,
-            description=f"Included node {v} in MST. Total weight: {mst_weight}",
-            data={
-                "visited": list(visited),
-                "mst_edges": mst_edges,
-                "node": v
-            }
-        ))
-        
-        # Add neigbors of v
-        if v in graph:
-            for neighbor, w in graph[v].items():
+        if visited:
+            steps.append(Step(type=StepType.INFO, description=f"Graph is disconnected; start a new forest component at {component_start}", data={"component_start": component_start, "visited": sorted(visited)}))
+        visited.add(component_start)
+        queue = []
+        for neighbor, weight in adjacency[component_start].items():
+            heapq.heappush(queue, (weight, component_start, neighbor))
+        while queue:
+            weight, source, target = heapq.heappop(queue)
+            operations += 1
+            if target in visited:
+                continue
+            visited.add(target)
+            edge = {"u": source, "v": target, "weight": weight}
+            mst_edges.append(edge)
+            total_weight += weight
+            steps.append(Step(type=StepType.PICK, description=f"Accept edge {source} — {target} with weight {weight:g}", data={"u": source, "v": target, "weight": weight, "mst_edges": list(mst_edges)}))
+            steps.append(Step(type=StepType.UPDATE, description=f"Add {target} to the spanning forest; total weight is {total_weight:g}", data={"node": target, "visited": sorted(visited), "mst_edges": list(mst_edges), "total_weight": total_weight}))
+            for neighbor, next_weight in adjacency[target].items():
                 if neighbor not in visited:
-                    heapq.heappush(pq, (w, v, neighbor))
-                    steps.append(Step(
-                        type=StepType.HIGHLIGHT,
-                        description=f"Added edge {v}->{neighbor} (weight {w}) to PQ",
-                        data={
-                            "current_node": v,
-                            "checking_neighbor": neighbor,
-                            "edge_weight": w
-                        }
-                    ))
+                    heapq.heappush(queue, (next_weight, target, neighbor))
+                    steps.append(Step(type=StepType.HIGHLIGHT, description=f"Add candidate edge {target} — {neighbor} to the priority queue", data={"current_node": target, "checking_neighbor": neighbor, "edge_weight": next_weight, "visited": sorted(visited)}))
 
-    end_time = time.time()
-    
+    component_count = len(nodes) - len(mst_edges)
+    is_spanning_tree = component_count == 1
+    steps.append(Step(type=StepType.SOLUTION, description=f"Minimum spanning forest complete: {len(mst_edges)} edges across {component_count} component(s)", data={"mst_edges": mst_edges, "total_weight": total_weight, "components_count": component_count, "is_spanning_tree": is_spanning_tree}))
+    elapsed = perf_counter() - started
     return AlgorithmResult(
-        steps=steps,
-        result_value=mst_weight,
-        selected_items=[],
-        metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity=f"O(V+E)",
-            time_complexity=f"O(E log V)",
-            step_count=len(steps)
-        )
+        steps=steps, result_value=total_weight, selected_items=[],
+        result_data={"mst_edges": mst_edges, "total_weight": total_weight, "components_count": component_count, "is_spanning_tree": is_spanning_tree},
+        metrics=Metrics(time_taken=elapsed, time_complexity="O(E log V)", space_complexity="O(V + E)", step_count=len(steps), operation_count=operations)
     )

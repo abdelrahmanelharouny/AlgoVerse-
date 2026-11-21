@@ -1,13 +1,29 @@
+import React, { useEffect, useRef, useState } from 'react';
+import type { Step } from '../types';
 
-import React, { useEffect, useRef } from 'react';
+interface HuffmanNodeInput {
+    id: string | number;
+    char: string | null;
+    freq: number;
+}
+
+interface HuffmanStepData {
+    nodes?: HuffmanNodeInput[];
+    left_id?: string | number;
+    right_id?: string | number;
+    new_node_id?: string | number;
+    freq?: number;
+    left_child_id?: string | number;
+    right_child_id?: string | number;
+    codes?: Record<string, string>;
+}
 
 interface HuffmanCanvasProps {
-    currentStepData: any;
-    allSteps: any[]; // To reconstruct state if needed, but currentStepData might be enough if we track state in Visualizer
+    currentStepData: HuffmanStepData;
+    allSteps: Step[];
     stepIndex: number;
 }
 
-// Simple Node Interface for visualization
 interface VisNode {
     id: string | number;
     char: string | null;
@@ -20,288 +36,267 @@ interface VisNode {
     isLeaf: boolean;
 }
 
+const NODE_RADIUS = 19;
+const X_GAP = 28;
+const TREE_GAP = 34;
+const Y_SPACING = 66;
+const TOP_PADDING = 54;
+
+const animateCanvasUpdate = (canvas: HTMLCanvasElement) => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (!reduceMotion && typeof canvas.animate === 'function') {
+        canvas.animate([{ opacity: 0.72 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
+    }
+};
+
 const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepIndex, allSteps }) => {
+    const hostRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-
-    // We need to maintain the state of the "Forest" across renders if we want smooth transitions
-    // OR we can re-calculate the forest layout based on the current step.
-    // Given the step-based architecture, re-calculating or using a persistent ref for the layout state is best.
-
-    // Let's rely on the fact that we can rebuild the tree structure from the steps up to current index.
-    // Ideally, Visualizer.tsx should pass us the "current forest state", but currently it passes generic `dpData` etc.
-    // For Huffman, `dpData` isn't very useful. We might need to handle the state reconstruction here or in a helper.
-
-    // Quick Hack: For this implementation, let's effectively "replay" to build the visual graph inside the effect. 
-    // This is fast enough for N < 100.
+    const [viewportWidth, setViewportWidth] = useState(800);
 
     useEffect(() => {
+        const host = hostRef.current;
+        if (!host) return;
+        const updateWidth = () => {
+            const measured = Math.floor(host.getBoundingClientRect().width);
+            const next = Math.max(280, measured || 800);
+            setViewportWidth(current => current === next ? current : next);
+        };
+        updateWidth();
+        if (typeof ResizeObserver !== 'undefined') {
+            const observer = new ResizeObserver(updateWidth);
+            observer.observe(host);
+            return () => observer.disconnect();
+        }
+        window.addEventListener('resize', updateWidth);
+        return () => window.removeEventListener('resize', updateWidth);
+    }, []);
+
+    useEffect(() => {
+        const host = hostRef.current;
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!host || !canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Basic Setup
-        const width = canvas.width;
-        const height = canvas.height;
-        ctx.clearRect(0, 0, width, height);
+        const nodes: Record<string, VisNode> = Object.create(null) as Record<string, VisNode>;
+        let rootIds: Array<string | number> = [];
 
-        // --- 1. Reconstruct Forest State ---
-        // We look at `currentStepData` and potentially prev steps if needed. 
-        // Actually, without the full history passed down or a "State" object, it's hard.
-        // BUT, `Visualizer.tsx` calls `computeStateForIndex` which is generic. 
-        // We might need to accept `currentStepData` which holds the *action*, 
-        // but we implicitly need the *accumulated* state.
+        if (stepIndex >= 0) {
+            for (let index = 0; index <= stepIndex; index++) {
+                const step = allSteps[index];
+                if (!step) continue;
+                const data = (step.data ?? {}) as HuffmanStepData;
 
-        // Since `Visualizer.tsx` is generic, it doesn't know how to accumulate Huffman Trees.
-        // We will assume `currentStepData` might contain enough info, or we have to rely on `allSteps` (passed in props).
-        // Let's add `allSteps` to props in the file creation above. (I did).
-
-        // Let's Rebuild the Graph State from Step 0 to stepIndex
-        // Nodes map: id -> VisNode
-        // Active Forest: list of node IDs that are roots
-
-        let nodes: Record<string, VisNode> = {};
-        let rootIds: (string | number)[] = [];
-        // let codes: Record<string, string> = {}; // Unused
-
-        // We need access to the steps. 
-        // NOTE: The `allSteps` prop is not yet passed from Visualizer. We need to ensure we add it there.
-        // PRO TIP: I will access it via a custom prop I'll add to Visualizer.tsx logic later.
-
-        // MOCK RECONSTRUCTION LOGIC (to be replaced by actual props if I can't get them)
-        // Wait, I can't easily change the signature of Visualizer's sub-components in a generic way without casting.
-        // Let's assume for now, I will modify Visualizer to pass `steps={result.steps}` to this component.
-
-        // Actually, let's look at `currentStepData`.
-        // INIT: {"nodes": [{"id":..., "char": "A", "freq": 5}, ...]} -> Sets initial roots
-        // HIGHLIGHT: {"left_id": ..., "right_id": ...} -> Just visual highlight
-        // UPDATE: {"new_node_id": ..., "left_child_id": ..., "right_child_id": ...} -> Merge Update
-
-        // So we can rebuild easily.
-        // Use the allSteps prop that is passed from Visualizer
-        const steps = allSteps || [];
-
-        // -----------------------------------------------------------------------
-        // STATE REBUILDER
-        // -----------------------------------------------------------------------
-        if (!steps || steps.length === 0) return;
-
-        for (let k = 0; k <= stepIndex; k++) {
-            const step = steps[k];
-            if (!step) continue;
-
-            if (step.type === 'init' && step.data.nodes) {
-                // Reset
-                nodes = {};
-                rootIds = [];
-                step.data.nodes.forEach((n: any) => {
-                    nodes[n.id] = {
-                        id: n.id,
-                        char: n.char,
-                        freq: n.freq,
+                if (step.type === 'init' && Array.isArray(data.nodes)) {
+                    Object.keys(nodes).forEach(key => delete nodes[key]);
+                    rootIds = [];
+                    data.nodes.forEach(node => {
+                        const key = String(node.id);
+                        nodes[key] = {
+                            id: node.id,
+                            char: node.char,
+                            freq: Number.isFinite(node.freq) ? node.freq : 0,
+                            x: 0,
+                            y: 0,
+                            isLeaf: true
+                        };
+                        rootIds.push(node.id);
+                    });
+                } else if (step.type === 'update' && data.new_node_id !== undefined) {
+                    const newKey = String(data.new_node_id);
+                    nodes[newKey] = {
+                        id: data.new_node_id,
+                        char: null,
+                        freq: Number.isFinite(data.freq) ? Number(data.freq) : 0,
                         x: 0,
                         y: 0,
-                        isLeaf: true
+                        leftId: data.left_child_id,
+                        rightId: data.right_child_id,
+                        isLeaf: false
                     };
-                    rootIds.push(n.id);
-                });
-            } else if (step.type === 'update' && step.data.new_node_id) {
-                const { new_node_id, freq, left_child_id, right_child_id } = step.data;
+                    rootIds = rootIds.filter(id =>
+                        String(id) !== String(data.left_child_id)
+                        && String(id) !== String(data.right_child_id)
+                    );
+                    rootIds.push(data.new_node_id);
 
-                // Create new internal node
-                nodes[new_node_id] = {
-                    id: new_node_id,
-                    char: null,
-                    freq: freq,
-                    x: 0,
-                    y: 0,
-                    leftId: left_child_id,
-                    rightId: right_child_id,
-                    isLeaf: false
-                };
-
-                // Remove children from roots, add new node to roots
-                rootIds = rootIds.filter(id => id !== left_child_id && id !== right_child_id);
-                rootIds.push(new_node_id);
-
-                // Update parent pointers
-                if (nodes[left_child_id]) nodes[left_child_id].parentId = new_node_id;
-                if (nodes[right_child_id]) nodes[right_child_id].parentId = new_node_id;
-            } else if (step.type === 'solution' && step.data.codes) {
-                // codes = step.data.codes; // Unused for now
+                    if (data.left_child_id !== undefined && nodes[String(data.left_child_id)]) {
+                        nodes[String(data.left_child_id)].parentId = data.new_node_id;
+                    }
+                    if (data.right_child_id !== undefined && nodes[String(data.right_child_id)]) {
+                        nodes[String(data.right_child_id)].parentId = data.new_node_id;
+                    }
+                }
             }
         }
 
-        // -----------------------------------------------------------------------
-        // LAYOUT CALCULATION
-        // -----------------------------------------------------------------------
-        // We have a set of `rootIds`. Each is a tree.
-        // We need to layout these trees side-by-side.
-        // Inside each tree, we use a recursive layout.
+        if (rootIds.length === 0) {
+            canvas.width = Math.max(280, viewportWidth);
+            canvas.height = 210;
+            canvas.style.width = canvas.width + 'px';
+            canvas.style.height = canvas.height + 'px';
+            const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+            canvas.width = Math.round(canvas.width * dpr);
+            canvas.height = Math.round(canvas.height * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.fillStyle = '#101c2d';
+            ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+            ctx.fillStyle = '#a1b0a3';
+            ctx.font = '13px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Play the trace to build the Huffman forest', canvas.width / dpr / 2, 105);
+            return;
+        }
 
-        const NODE_RADIUS = 20;
-        const Y_SPACING = 60;
+        const widthCache = new Map<string, number>();
+        const measuring = new Set<string>();
 
-        // Helper to calculate subtree width
-        const getTreeWidth = (nodeId: string | number): number => {
-            const node = nodes[nodeId];
-            if (!node) return 0;
-            if (node.isLeaf) return NODE_RADIUS * 2 + 10;
-            const leftW = node.leftId ? getTreeWidth(node.leftId) : 0;
-            const rightW = node.rightId ? getTreeWidth(node.rightId) : 0;
-            return leftW + rightW + 20; // Gap
+        const treeWidth = (id: string | number): number => {
+            const key = String(id);
+            const cached = widthCache.get(key);
+            if (cached !== undefined) return cached;
+            const node = nodes[key];
+            if (!node) return NODE_RADIUS * 2 + 12;
+            if (node.isLeaf || measuring.has(key)) return NODE_RADIUS * 2 + 14;
+            measuring.add(key);
+            const left = node.leftId !== undefined ? treeWidth(node.leftId) : 0;
+            const right = node.rightId !== undefined ? treeWidth(node.rightId) : 0;
+            measuring.delete(key);
+            const width = Math.max(NODE_RADIUS * 2 + 14, left + right + X_GAP);
+            widthCache.set(key, width);
+            return width;
         };
 
-        // Position assignment recursive
-        const assignPositions = (nodeId: string | number, x: number, y: number) => {
-            const node = nodes[nodeId];
-            if (!node) return;
+        const treeDepth = (id: string | number, ancestry = new Set<string>()): number => {
+            const key = String(id);
+            const node = nodes[key];
+            if (!node || node.isLeaf || ancestry.has(key)) return 1;
+            const next = new Set(ancestry);
+            next.add(key);
+            const left = node.leftId !== undefined ? treeDepth(node.leftId, next) : 0;
+            const right = node.rightId !== undefined ? treeDepth(node.rightId, next) : 0;
+            return 1 + Math.max(left, right);
+        };
+
+        const forestWidth = rootIds.reduce((sum, id) => sum + treeWidth(id), 0)
+            + Math.max(0, rootIds.length - 1) * TREE_GAP;
+        const canvasWidth = Math.max(viewportWidth - 24, forestWidth + 48, 280);
+        const forestHeight = Math.max(1, ...rootIds.map(treeDepth));
+        const canvasHeight = Math.max(230, TOP_PADDING + (forestHeight - 1) * Y_SPACING + NODE_RADIUS * 2 + 46);
+        const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+
+        canvas.width = Math.round(canvasWidth * dpr);
+        canvas.height = Math.round(canvasHeight * dpr);
+        canvas.style.width = canvasWidth + 'px';
+        canvas.style.height = canvasHeight + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        ctx.fillStyle = '#101c2d';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        const offsetX = Math.max(24, (canvasWidth - forestWidth) / 2);
+        const positioned = new Set<string>();
+        const assign = (id: string | number, x: number, y: number, ancestry = new Set<string>()) => {
+            const key = String(id);
+            const node = nodes[key];
+            if (!node || ancestry.has(key)) return;
             node.x = x;
             node.y = y;
-
-            if (node.leftId && node.rightId) {
-                const leftW = getTreeWidth(node.leftId);
-                const rightW = getTreeWidth(node.rightId);
-                const totalW = leftW + rightW;
-
-                // We center the children around the parent ? No, parent centered above children.
-                // Left child requires `leftW` space, Right child requires `rightW`.
-                // Total span is `leftW + rightW`.
-                // Parent is at `x`.
-                // Left Child Center should be to the left.
-
-
-
-                // Better approach: calculate exact boundaries
-                // Let's just create a simplified visual: 
-                // Parent X is average of children X (bottom-up), or 
-                // Children X are offset from Parent X (top-down).
-                // Top-down is easier if we know widths.
-
-                // Simple binary tree layout: 
-                // Offset reduces by level: 200, 100, 50...
-                // But we have forests not a single tree.
-                // Let's use the width approach.
-                // Left Start = x - totalW/2. 
-                // Left Child X = Left Start + leftW/2
-                // Right Start = Left Start + leftW
-                // Right Child X = Right Start + rightW/2
-
-                const startX = x - totalW / 2;
-                assignPositions(node.leftId, startX + leftW / 2, y + Y_SPACING);
-                assignPositions(node.rightId, startX + leftW + rightW / 2, y + Y_SPACING);
-            }
+            positioned.add(key);
+            if (node.leftId === undefined || node.rightId === undefined) return;
+            const leftWidth = treeWidth(node.leftId);
+            const rightWidth = treeWidth(node.rightId);
+            const span = leftWidth + rightWidth + X_GAP;
+            const leftCenter = x - span / 2 + leftWidth / 2;
+            const rightCenter = x - span / 2 + leftWidth + X_GAP + rightWidth / 2;
+            const next = new Set(ancestry);
+            next.add(key);
+            assign(node.leftId, leftCenter, y + Y_SPACING, next);
+            assign(node.rightId, rightCenter, y + Y_SPACING, next);
         };
 
-        // Layout the ROOTS
-        // We place roots side by side at the "bottom" or "top"?
-        // Huffman builds bottom-up. But we usually visualize tree root at top.
-        // During construction, we have multiple trees.
-        // Let's iterate roots and place them.
-
-        let currentX_Offset = 50;
-        const BASE_Y = 100;
-
-        // Sort roots by frequency so visuals match logic (visual greedy pick)
-        // actually existing roots track their frequency.
-        // But the layout might jump around if we strictly follow ID order. 
-        // Let's trust `rootIds` order which is roughly insertion order.
-
-        rootIds.forEach(rid => {
-            const w = getTreeWidth(rid);
-            const centerX = currentX_Offset + w / 2;
-            assignPositions(rid, centerX, BASE_Y);
-            currentX_Offset += w + 40; // Spacing between trees
+        let rootCursor = offsetX;
+        rootIds.forEach(id => {
+            const width = treeWidth(id);
+            assign(id, rootCursor + width / 2, TOP_PADDING);
+            rootCursor += width + TREE_GAP;
         });
 
-        // -----------------------------------------------------------------------
-        // DRAWING ENACTMENT
-        // -----------------------------------------------------------------------
-
-        // Draw Edges
+        // Draw connections before nodes so every node remains legible.
         Object.values(nodes).forEach(node => {
-            if (node.leftId) {
-                const child = nodes[node.leftId];
-                if (child) {
-                    ctx.beginPath();
-                    ctx.moveTo(node.x, node.y + NODE_RADIUS);
-                    ctx.lineTo(child.x, child.y - NODE_RADIUS);
-                    ctx.strokeStyle = '#64748b';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-
-                    // Edge Label (0)
-                    ctx.fillStyle = '#94a3b8';
-                    ctx.font = '10px Inter';
-                    ctx.fillText('0', (node.x + child.x) / 2 - 10, (node.y + child.y) / 2);
-                }
-            }
-            if (node.rightId) {
-                const child = nodes[node.rightId];
-                if (child) {
-                    ctx.beginPath();
-                    ctx.moveTo(node.x, node.y + NODE_RADIUS);
-                    ctx.lineTo(child.x, child.y - NODE_RADIUS);
-                    ctx.strokeStyle = '#64748b';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    // Edge Label (1)
-                    ctx.fillStyle = '#94a3b8';
-                    ctx.font = '10px Inter';
-                    ctx.fillText('1', (node.x + child.x) / 2 + 5, (node.y + child.y) / 2);
-                }
-            }
+            if (!positioned.has(String(node.id))) return;
+            const drawChild = (childId: string | number | undefined, bit: string, side: number) => {
+                if (childId === undefined) return;
+                const child = nodes[String(childId)];
+                if (!child || !positioned.has(String(child.id))) return;
+                ctx.beginPath();
+                ctx.moveTo(node.x, node.y + NODE_RADIUS - 2);
+                ctx.lineTo(child.x, child.y - NODE_RADIUS + 2);
+                ctx.strokeStyle = '#53677f';
+                ctx.lineWidth = 1.7;
+                ctx.stroke();
+                ctx.fillStyle = '#a9b8c9';
+                ctx.font = '10px ui-monospace, monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(bit, (node.x + child.x) / 2 + side, (node.y + child.y) / 2);
+            };
+            drawChild(node.leftId, '0', -8);
+            drawChild(node.rightId, '1', 8);
         });
 
-        // Draw Nodes
         Object.values(nodes).forEach(node => {
+            if (!positioned.has(String(node.id))) return;
+            const selectedLeft = currentStepData?.left_id ?? currentStepData?.left_child_id;
+            const selectedRight = currentStepData?.right_id ?? currentStepData?.right_child_id;
+            const isSelected = [selectedLeft, selectedRight].some(
+                selectedId => selectedId !== undefined && String(selectedId) === String(node.id)
+            );
+            const isMerged = currentStepData?.new_node_id !== undefined
+                && String(currentStepData.new_node_id) === String(node.id);
             ctx.beginPath();
             ctx.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI * 2);
-
-            // Fill Style
-            let fill = 'rgba(30, 41, 59, 1)'; // slate-800
-            let stroke = '#475569';
-
-            // HIGHLIGHT LOGIC
-            // If this node is being selected (highlight step)
-            if (currentStepData && (currentStepData.left_id === node.id || currentStepData.right_id === node.id)) {
-                fill = 'rgba(234, 179, 8, 0.2)'; // amber-500/20
-                stroke = '#eab308';
-            }
-            // If this node is the newly merged one
-            if (currentStepData && currentStepData.new_node_id === node.id) {
-                fill = 'rgba(16, 185, 129, 0.2)'; // emerald-500/20
-                stroke = '#10b981';
-            }
-
-            ctx.fillStyle = fill;
-            ctx.strokeStyle = stroke;
+            ctx.fillStyle = isMerged ? '#314c2f' : isSelected ? '#68402f' : node.isLeaf ? '#243d5a' : '#22324a';
+            ctx.strokeStyle = isMerged ? '#d5ef79' : isSelected ? '#ffb66f' : node.isLeaf ? '#78b8ff' : '#607895';
+            ctx.lineWidth = isMerged || isSelected ? 2.6 : 1.6;
             ctx.fill();
             ctx.stroke();
 
-            // Text
-            ctx.fillStyle = '#fff';
-            ctx.font = '12px Inter';
+            const symbol = node.char === ' ' ? '␠' : node.char;
+            ctx.fillStyle = '#f1f5f8';
+            ctx.font = '700 11px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-
-            if (node.char) {
-                ctx.fillText(`${node.char}:${node.freq}`, node.x, node.y);
-            } else {
-                ctx.fillStyle = '#94a3b8';
-                ctx.fillText(`${node.freq}`, node.x, node.y);
-            }
+            ctx.fillText(symbol || 'Σ', node.x, node.y, NODE_RADIUS * 1.65);
+            ctx.fillStyle = '#a9b8c9';
+            ctx.font = '9px ui-monospace, monospace';
+            ctx.fillText(String(node.freq), node.x, node.y + NODE_RADIUS + 12);
         });
+        animateCanvasUpdate(canvas);
+    }, [stepIndex, currentStepData, allSteps, viewportWidth]);
 
-    }, [stepIndex, currentStepData, allSteps]); // Use allSteps prop
+    const codes = currentStepData?.codes;
+    const codeEntries = codes ? Object.entries(codes) : [];
 
     return (
-        <canvas
-            ref={canvasRef}
-            width={800}
-            height={500}
-            className="w-full h-full"
-        />
+        <div ref={hostRef} className="av-visual-canvas max-h-[68vh] max-w-full overflow-auto rounded-xl border border-[#344b67] bg-[#101c2d] p-3">
+            <canvas
+                ref={canvasRef}
+                className="mx-auto block"
+                role="img"
+                aria-label="Huffman coding forest. Selected nodes and newly merged parent nodes are highlighted."
+            />
+            {codeEntries.length > 0 && (
+                <div className="sticky bottom-0 mt-2 flex flex-wrap gap-2 border-t border-[#34463a] bg-[#101a14]/95 pt-3">
+                    {codeEntries.map(([character, code]) => (
+                        <span key={character} className="rounded-md border border-[#3a4d3e] bg-[#1a2920] px-2 py-1 font-mono text-[10px] text-[#d8e2d6]">
+                            <strong className="mr-1 text-[#d6f56a]">{character === ' ' ? '␠' : character}</strong>{code}
+                        </span>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 };
 

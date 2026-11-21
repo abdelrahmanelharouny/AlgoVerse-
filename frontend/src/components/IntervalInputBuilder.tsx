@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, RefreshCw, Calendar, Clock } from 'lucide-react';
 
@@ -10,10 +10,11 @@ interface Interval {
 
 interface IntervalInputBuilderProps {
     onInputChange: (intervals: Interval[]) => void;
+    initialData?: Array<{ id: string | number; start: number; end: number }>;
 }
 
-const IntervalInputBuilder: React.FC<IntervalInputBuilderProps> = ({ onInputChange }) => {
-    const [intervals, setIntervals] = useState<Interval[]>([
+const IntervalInputBuilder: React.FC<IntervalInputBuilderProps> = ({ onInputChange, initialData }) => {
+    const [intervals, setIntervals] = useState<Interval[]>(() => initialData?.map(interval => ({ ...interval, id: String(interval.id) })) ?? [
         { id: '1', start: 1, end: 4 },
         { id: '2', start: 3, end: 5 },
         { id: '3', start: 0, end: 6 },
@@ -27,12 +28,12 @@ const IntervalInputBuilder: React.FC<IntervalInputBuilderProps> = ({ onInputChan
         { id: '11', start: 12, end: 16 }
     ]);
 
-    useEffect(() => {
-        onInputChange(intervals);
-    }, [intervals, onInputChange]);
+    const onInputChangeRef = useRef(onInputChange);
+    useEffect(() => { onInputChangeRef.current = onInputChange; }, [onInputChange]);
+    useEffect(() => { onInputChangeRef.current(intervals); }, [intervals]);
 
     const addInterval = () => {
-        const newId = (Math.max(...intervals.map(i => parseInt(i.id))) + 1).toString();
+        const newId = (Math.max(0, ...intervals.map(i => Number.parseInt(i.id, 10)).filter(Number.isFinite)) + 1).toString();
         const start = Math.floor(Math.random() * 10);
         const end = start + Math.floor(Math.random() * 5) + 1;
         setIntervals([...intervals, { id: newId, start, end }]);
@@ -43,11 +44,10 @@ const IntervalInputBuilder: React.FC<IntervalInputBuilderProps> = ({ onInputChan
     };
 
     const updateInterval = (id: string, field: 'start' | 'end', value: number) => {
-        setIntervals(intervals.map(i => {
-            if (i.id === id) {
-                return { ...i, [field]: value };
-            }
-            return i;
+        setIntervals(intervals.map(interval => {
+            if (interval.id !== id) return interval;
+            if (field === 'start') return { ...interval, start: value, end: Math.max(value, interval.end) };
+            return { ...interval, end: Math.max(interval.start, value) };
         }));
     };
 

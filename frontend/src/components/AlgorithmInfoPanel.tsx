@@ -1,15 +1,12 @@
 import React from 'react';
+import type { Step } from '../types';
 import { Clock, HardDrive, Info, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AlgorithmInfoPanelProps {
     algorithmName: string;
     algorithmId: string;
-    currentStep?: {
-        type: string;
-        description: string;
-        data?: any;
-    };
+    currentStep?: Step;
     stepIndex: number;
     totalSteps: number;
 }
@@ -22,24 +19,45 @@ const algorithmInfo: Record<string, {
     keyInsight: string;
     type: 'greedy' | 'dp' | 'graph';
 }> = {
+    'fractional-knapsack': {
+        description: "Maximize value when an item may be split and partially packed.",
+        timeComplexity: 'O(n log n)',
+        spaceComplexity: 'O(n)',
+        keyInsight: 'Sort by value density, then take each item fully or take the remaining fraction.',
+        type: 'greedy'
+    },
+    'knapsack': {
+        description: "Select whole items to maximize total value without exceeding capacity.",
+        timeComplexity: 'O(n × W)',
+        spaceComplexity: 'O(n × W)',
+        keyInsight: 'Each DP state compares excluding the current item with including it once.',
+        type: 'dp'
+    },
+    'interval-scheduling': {
+        description: "Select the largest set of mutually compatible intervals.",
+        timeComplexity: 'O(n log n)',
+        spaceComplexity: 'O(n)',
+        keyInsight: 'Sort by finish time and accept the next interval that starts after the previous one ends.',
+        type: 'greedy'
+    },
     'dijkstra': {
         description: "Finds shortest paths from a source vertex to all other vertices in a weighted graph.",
         timeComplexity: 'O((V + E) log V)',
-        spaceComplexity: 'O(V)',
+        spaceComplexity: 'O(V + E)',
         keyInsight: 'Always process the minimum distance vertex first - greedy choice leads to optimal solution.',
         type: 'graph'
     },
     'prims': {
         description: "Builds a Minimum Spanning Tree by greedily adding the cheapest edge that expands the tree.",
         timeComplexity: 'O(E log V)',
-        spaceComplexity: 'O(V)',
+        spaceComplexity: 'O(V + E)',
         keyInsight: 'Grow the tree by always picking the minimum weight edge connecting tree to non-tree vertices.',
         type: 'graph'
     },
     'kruskals': {
         description: "Builds MST by sorting all edges and adding them if they don't create a cycle (using Union-Find).",
         timeComplexity: 'O(E log E)',
-        spaceComplexity: 'O(V)',
+        spaceComplexity: 'O(V + E)',
         keyInsight: 'Union-Find enables O(α(n)) near-constant time cycle detection.',
         type: 'graph'
     },
@@ -55,6 +73,13 @@ const algorithmInfo: Record<string, {
         timeComplexity: 'O(m × n)',
         spaceComplexity: 'O(m × n)',
         keyInsight: 'If characters match, extend diagonal; otherwise take max of left or top.',
+        type: 'dp'
+    },
+    'coin-change-min': {
+        description: "Find minimum coins for a target amount using the same DP implementation.",
+        timeComplexity: 'O(n × amount)',
+        spaceComplexity: 'O(amount)',
+        keyInsight: 'For each amount, try all coin denominations and keep the smallest reachable count.',
         type: 'dp'
     },
     'coin-change': {
@@ -81,22 +106,22 @@ const algorithmInfo: Record<string, {
     'activity-selection': {
         description: "Select maximum number of non-overlapping activities/intervals.",
         timeComplexity: 'O(n log n)',
-        spaceComplexity: 'O(1)',
+        spaceComplexity: 'O(n)',
         keyInsight: 'Greedy works! Always pick activity that ends earliest - leaves most room for others.',
         type: 'greedy'
     },
     'huffman': {
         description: "Build optimal prefix-free codes for data compression based on character frequencies.",
-        timeComplexity: 'O(n log n)',
-        spaceComplexity: 'O(n)',
+        timeComplexity: 'O(n + k log k + B)',
+        spaceComplexity: 'O(k + B)',
         keyInsight: 'Always combine two lowest frequency nodes - builds optimal tree bottom-up.',
         type: 'greedy'
     },
     'lis': {
         description: "Find longest subsequence where elements are in strictly increasing order.",
-        timeComplexity: 'O(n log n)',
+        timeComplexity: 'O(n²)',
         spaceComplexity: 'O(n)',
-        keyInsight: 'Binary search to find position for each element in auxiliary array.',
+        keyInsight: 'For each position, compare all earlier values and extend the best increasing subsequence ending there.',
         type: 'dp'
     },
     'rod-cutting': {
@@ -124,9 +149,9 @@ const AlgorithmInfoPanel: React.FC<AlgorithmInfoPanelProps> = ({
     };
 
     const typeColors = {
-        greedy: 'from-emerald-500 to-green-500',
-        dp: 'from-indigo-500 to-purple-500',
-        graph: 'from-blue-500 to-cyan-500'
+        greedy: 'border-[#b8d75a] bg-[#d6f56a]/10 text-[#d6f56a]',
+        dp: 'border-[#83cbd8] bg-[#83cbd8]/10 text-[#83cbd8]',
+        graph: 'border-[#ff8063] bg-[#ff8063]/10 text-[#ff9b84]'
     };
 
     return (
@@ -134,7 +159,7 @@ const AlgorithmInfoPanel: React.FC<AlgorithmInfoPanelProps> = ({
             {/* Algorithm Header */}
             <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
                 <div className="flex items-center gap-2 mb-2">
-                    <span className={`px-2 py-0.5 text-xs font-semibold rounded bg-gradient-to-r ${typeColors[info.type]} text-white`}>
+                    <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded border ${typeColors[info.type]}`}>
                         {info.type.toUpperCase()}
                     </span>
                 </div>
@@ -159,11 +184,11 @@ const AlgorithmInfoPanel: React.FC<AlgorithmInfoPanelProps> = ({
             </div>
 
             {/* Key Insight */}
-            <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-500/30 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-xs text-yellow-400 mb-1">
+            <div className="bg-[#1c2920] border border-[#66734a] rounded-lg p-3">
+                <div className="flex items-center gap-2 text-xs text-[#d6f56a] mb-1">
                     <Lightbulb size={12} /> Key Insight
                 </div>
-                <p className="text-sm text-yellow-100">{info.keyInsight}</p>
+                <p className="text-sm leading-relaxed text-[#dce5d8]">{info.keyInsight}</p>
             </div>
 
             {/* Current Step Description */}
@@ -184,11 +209,11 @@ const AlgorithmInfoPanel: React.FC<AlgorithmInfoPanelProps> = ({
 
                         {/* Step type indicator */}
                         <div className="mt-2 flex items-center gap-2">
-                            <span className={`px-2 py-0.5 text-xs rounded ${currentStep.type === 'INIT' ? 'bg-blue-500/20 text-blue-400' :
-                                currentStep.type === 'UPDATE' ? 'bg-emerald-500/20 text-emerald-400' :
-                                    currentStep.type === 'PICK' ? 'bg-green-500/20 text-green-400' :
-                                        currentStep.type === 'REJECT' ? 'bg-red-500/20 text-red-400' :
-                                            currentStep.type === 'HIGHLIGHT' ? 'bg-yellow-500/20 text-yellow-400' :
+                            <span className={`px-2 py-0.5 text-xs rounded ${currentStep.type === 'init' ? 'bg-blue-500/20 text-blue-400' :
+                                currentStep.type === 'update' ? 'bg-emerald-500/20 text-emerald-400' :
+                                    currentStep.type === 'pick' ? 'bg-green-500/20 text-green-400' :
+                                        currentStep.type === 'reject' ? 'bg-red-500/20 text-red-400' :
+                                            currentStep.type === 'highlight' ? 'bg-yellow-500/20 text-yellow-400' :
                                                 'bg-slate-500/20 text-slate-400'
                                 }`}>
                                 {currentStep.type}

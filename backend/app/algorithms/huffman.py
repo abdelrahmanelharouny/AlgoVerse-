@@ -1,133 +1,77 @@
-
 import heapq
-import time
 from collections import Counter
-from typing import List, Optional, Dict
-from app.models import AlgorithmResult, Step, StepType, Metrics, HuffmanInput
+from time import perf_counter
+from typing import Dict, Optional
+
+from app.models import AlgorithmResult, HuffmanInput, Metrics, Step, StepType
+
 
 class HuffmanNode:
-    def __init__(self, char: Optional[str], freq: int):
+    def __init__(self, char: Optional[str], frequency: int, node_id: int):
         self.char = char
-        self.freq = freq
-        self.left: Optional[HuffmanNode] = None
-        self.right: Optional[HuffmanNode] = None
-        # Unique ID for visualization tracking
-        self.id = id(self) 
+        self.frequency = frequency
+        self.id = node_id
+        self.left: Optional["HuffmanNode"] = None
+        self.right: Optional["HuffmanNode"] = None
 
-    def __lt__(self, other):
-        return self.freq < other.freq
 
 def solve_huffman(data: HuffmanInput) -> AlgorithmResult:
-    start_time = time.time()
-    steps = []
+    """Build a deterministic Huffman tree, including the one-symbol edge case."""
+    started = perf_counter()
     text = data.text
-    
-    # 1. Frequency Count
     if not text:
-         return AlgorithmResult(
-            steps=[],
-            result_value=0,
-            selected_items=[],
-            metrics=Metrics(
-                time_taken=0,
-                space_complexity="O(1)",
-                time_complexity="O(1)",
-                step_count=0
-            )
-        )
+        step = Step(type=StepType.INFO, description="No input text was provided", data={"codes": {}, "encoded_text": ""})
+        return AlgorithmResult(steps=[step], result_value=0, selected_items=[], result_data={"codes": {}, "encoded_text": "", "original_bits": 0, "compressed_bits": 0, "compression_ratio": 0}, metrics=Metrics(time_taken=0, time_complexity="O(1)", space_complexity="O(1)", step_count=1, operation_count=0))
 
-    freq_map = Counter(text)
-    
-    steps.append(Step(
-        type=StepType.INIT,
-        description=f"Calculated frequencies for text: '{text}'",
-        data={"frequencies": dict(freq_map)}
-    ))
+    frequencies = Counter(text)
+    steps = [Step(type=StepType.INIT, description="Count the frequency of each character", data={"frequencies": dict(frequencies)})]
+    heap = []
+    next_id = 0
+    for char, frequency in sorted(frequencies.items()):
+        node = HuffmanNode(char, frequency, next_id)
+        heap.append((frequency, next_id, node))
+        next_id += 1
+    heapq.heapify(heap)
+    steps.append(Step(type=StepType.INIT, description="Insert all leaf nodes into the min-priority queue", data={"nodes": [{"id": node.id, "char": node.char, "freq": node.frequency} for _, _, node in heap]}))
+    operations = 0
 
-    # 2. Priority Queue
-    pq = [HuffmanNode(char, freq) for char, freq in freq_map.items()]
-    heapq.heapify(pq)
-    
-    initial_nodes = [{"id": node.id, "char": node.char, "freq": node.freq} for node in pq]
-    steps.append(Step(
-        type=StepType.INIT,
-        description="Initialized Priority Queue with leaf nodes.",
-        data={"nodes": initial_nodes}
-    ))
+    while len(heap) > 1:
+        left_frequency, _, left = heapq.heappop(heap)
+        right_frequency, _, right = heapq.heappop(heap)
+        operations += 1
+        steps.append(Step(type=StepType.HIGHLIGHT, description=f"Extract the two least frequent nodes ({left_frequency} and {right_frequency})", data={"left_id": left.id, "right_id": right.id, "left_freq": left_frequency, "right_freq": right_frequency}))
+        parent = HuffmanNode(None, left_frequency + right_frequency, next_id)
+        next_id += 1
+        parent.left = left
+        parent.right = right
+        heapq.heappush(heap, (parent.frequency, parent.id, parent))
+        steps.append(Step(type=StepType.UPDATE, description=f"Merge them into a parent node with frequency {parent.frequency}", data={"new_node_id": parent.id, "freq": parent.frequency, "left_child_id": left.id, "right_child_id": right.id, "remaining_count": len(heap)}))
 
-    # 3. Build Tree
-    while len(pq) > 1:
-        # Extract two smallest
-        left = heapq.heappop(pq)
-        right = heapq.heappop(pq)
-        
-        steps.append(Step(
-            type=StepType.HIGHLIGHT,
-            description=f"Selected two smallest nodes: '{left.char or 'Internal'}' ({left.freq}) and '{right.char or 'Internal'}' ({right.freq})",
-            data={
-                "left_id": left.id, 
-                "right_id": right.id,
-                "left_freq": left.freq,
-                "right_freq": right.freq
-            }
-        ))
+    root = heap[0][2]
+    codes: Dict[str, str] = {}
 
-        # Merge
-        merged = HuffmanNode(None, left.freq + right.freq)
-        merged.left = left
-        merged.right = right
-        
-        heapq.heappush(pq, merged)
-        
-        steps.append(Step(
-            type=StepType.UPDATE,
-            description=f"Merged into new internal node with frequency {merged.freq}",
-            data={
-                "new_node_id": merged.id,
-                "freq": merged.freq,
-                "left_child_id": left.id,
-                "right_child_id": right.id,
-                "remaining_count": len(pq)
-            }
-        ))
-
-    root = pq[0]
-    
-    # 4. Generate Codes (DFS)
-    codes = {}
-    
-    def generate_codes(node: HuffmanNode, current_code: str):
+    # Iterative traversal avoids Python recursion-depth failures for a
+    # highly skewed frequency distribution with many unique symbols.
+    stack = [(root, "")]
+    while stack:
+        node, prefix = stack.pop()
         if node.char is not None:
-            codes[node.char] = current_code
-            return
-        
-        if node.left:
-            generate_codes(node.left, current_code + "0")
-        if node.right:
-            generate_codes(node.right, current_code + "1")
-
-    generate_codes(root, "")
-    
-    steps.append(Step(
-        type=StepType.SOLUTION,
-        description="Huffman Codes Generated",
-        data={"codes": codes}
-    ))
-    
-    # Calculate total bits
-    total_bits = sum(freq_map[char] * len(code) for char, code in codes.items())
-    original_bits = len(text) * 8 # Assuming ASCII/UTF-8 byte is 8 bits for simplicity in comparison
-
-    end_time = time.time()
+            # A one-symbol alphabet still needs a non-empty decodable code.
+            codes[node.char] = prefix or "0"
+            continue
+        if node.right is not None:
+            stack.append((node.right, prefix + "1"))
+        if node.left is not None:
+            stack.append((node.left, prefix + "0"))
+    encoded_text = "".join(codes[char] for char in text)
+    compressed_bits = len(encoded_text)
+    original_bits = len(text.encode("utf-8")) * 8
+    ratio = compressed_bits / original_bits if original_bits else 0
+    steps.append(Step(type=StepType.SOLUTION, description="Huffman codes and encoded message are ready", data={"codes": codes, "encoded_text": encoded_text, "compressed_bits": compressed_bits, "original_bits": original_bits}))
+    elapsed = perf_counter() - started
 
     return AlgorithmResult(
-        steps=steps,
-        result_value=total_bits, # Use result_value to return total bits
-        selected_items=[], 
-        metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity="O(K) where K is unique chars",
-            time_complexity="O(N log K) where N is text length",
-            step_count=len(steps)
-        )
+        steps=steps, result_value=compressed_bits, selected_items=[],
+        result_data={"codes": codes, "encoded_text": encoded_text, "frequencies": dict(frequencies), "original_bits": original_bits, "compressed_bits": compressed_bits, "compression_ratio": ratio},
+        metrics=Metrics(time_taken=elapsed, time_complexity="O(n + k log k)", space_complexity="O(k + n)", step_count=len(steps), operation_count=operations)
     )

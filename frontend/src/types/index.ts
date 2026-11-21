@@ -4,6 +4,7 @@ export const AlgorithmType = {
     GREEDY: 'greedy',
     KNAPSACK_DP: 'knapsack_dp',
     KNAPSACK_GREEDY: 'knapsack_greedy',
+    FRACTIONAL_KNAPSACK: 'fractional_knapsack',
     KNAPSACK: 'knapsack',
     COIN_CHANGE_DP: 'coin_change_dp',
     COIN_CHANGE_GREEDY: 'coin_change_greedy',
@@ -56,7 +57,8 @@ export interface Metrics {
 export interface AlgorithmResult {
     steps: Step[];
     result_value: number;
-    selected_items: number[];
+    selected_items: Array<number | string>;
+    result_data?: Record<string, unknown>;
     metrics: Metrics;
 }
 
@@ -106,12 +108,18 @@ export interface IntervalSchedulingInput {
 }
 
 export interface GreedyDecision {
-    itemId: number;
+    itemId: string | number;
     weight: number;
     value: number;
     ratio: number;
     picked: boolean;
     currentTotal: number;
+    cumulativeWeight?: number;
+    start?: number;
+    end?: number;
+    count?: number;
+    remaining?: number;
+    fraction?: number;
 }
 
 export interface PrimsInput {

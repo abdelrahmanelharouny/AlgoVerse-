@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Code, Copy, Download, Check } from 'lucide-react';
+import type { KnapsackInput, CoinChangeInput, IntervalSchedulingInput } from '../types';
 
 interface CodeExporterProps {
     algorithmType: 'knapsack' | 'coin-change' | 'interval-scheduling';
     variant: 'dp' | 'greedy';
-    inputData: any;
+    inputData: KnapsackInput | CoinChangeInput | IntervalSchedulingInput;
 }
 
-const CODE_TEMPLATES = {
+type CodeLanguage = 'python' | 'javascript';
+type CodeTemplate = Partial<Record<CodeExporterProps['variant'], Partial<Record<CodeLanguage, string>>>>;
+
+const CODE_TEMPLATES: Partial<Record<CodeExporterProps['algorithmType'], CodeTemplate>> = {
     knapsack: {
         dp: {
             python: `def knapsack_dp(items, capacity):
@@ -147,16 +151,16 @@ const CodeExporter: React.FC<CodeExporterProps> = ({ algorithmType, variant, inp
     const [copied, setCopied] = useState(false);
 
     const getTemplate = (): string => {
-        const templates = CODE_TEMPLATES as any;
-        const template = templates[algorithmType]?.[variant]?.[language];
+        const template = CODE_TEMPLATES[algorithmType]?.[variant]?.[language];
         if (!template) return '// Template not available';
 
         // Replace placeholders with actual data
         let code = template;
 
         if (algorithmType === 'knapsack' && inputData) {
-            code = code.replace('{{ITEMS}}', JSON.stringify(inputData.items, null, 2));
-            code = code.replace('{{CAPACITY}}', inputData.capacity.toString());
+            const knapsackInput = inputData as KnapsackInput;
+            code = code.replace('{{ITEMS}}', JSON.stringify(knapsackInput.items, null, 2));
+            code = code.replace('{{CAPACITY}}', knapsackInput.capacity.toString());
         }
 
         return code;

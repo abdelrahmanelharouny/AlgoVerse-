@@ -1,188 +1,201 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { type GreedyDecision } from '../types';
+import type { GreedyDecision } from '../types';
+
+type GreedyViewMode = 'knapsack' | 'fractional' | 'coins';
 
 interface GreedyChainCanvasProps {
     decisions: GreedyDecision[];
     currentIndex: number;
+    mode?: GreedyViewMode;
+    amount?: number;
 }
+
+const animateCanvasUpdate = (canvas: HTMLCanvasElement) => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (!reduceMotion && typeof canvas.animate === 'function') {
+        canvas.animate([{ opacity: 0.76 }, { opacity: 1 }], { duration: 140, easing: 'ease-out' });
+    }
+};
+
+const CARD_WIDTH = 184;
+const CARD_HEIGHT = 132;
+const CARD_SPACING = 30;
+const ARROW_LENGTH = 22;
 
 const GreedyChainCanvas: React.FC<GreedyChainCanvasProps> = ({
     decisions,
-    currentIndex
+    currentIndex,
+    mode = 'knapsack',
+    amount = 0
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const animationRef = useRef<number | null>(null);
-
-    const CARD_WIDTH = 180;
-    const CARD_HEIGHT = 120;
-    const CARD_SPACING = 40;
-    const ARROW_LENGTH = 30;
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const totalWidth = decisions.length * (CARD_WIDTH + ARROW_LENGTH + CARD_SPACING) + 40;
-        const height = CARD_HEIGHT + 80;
+        const totalWidth = Math.max(
+            320,
+            decisions.length * CARD_WIDTH + Math.max(0, decisions.length - 1) * (ARROW_LENGTH + CARD_SPACING) + 40
+        );
+        const height = CARD_HEIGHT + 78;
+        const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
 
-        canvas.width = totalWidth * window.devicePixelRatio;
-        canvas.height = height * window.devicePixelRatio;
-        canvas.style.width = `${totalWidth}px`;
-        canvas.style.height = `${height}px`;
+        canvas.width = Math.round(totalWidth * dpr);
+        canvas.height = Math.round(height * dpr);
+        canvas.style.width = totalWidth + 'px';
+        canvas.style.height = height + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, totalWidth, height);
+        ctx.fillStyle = '#101c2d';
+        ctx.fillRect(0, 0, totalWidth, height);
 
-        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        const drawRoundedRect = (x: number, y: number, width: number, boxHeight: number, radius: number) => {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + boxHeight - radius);
+            ctx.quadraticCurveTo(x + width, y + boxHeight, x + width - radius, y + boxHeight);
+            ctx.lineTo(x + radius, y + boxHeight);
+            ctx.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        };
 
-        const draw = () => {
-            // Clear
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(0, 0, totalWidth, height);
+        let xOffset = 20;
+        decisions.forEach((decision, index) => {
+            const isActive = index === currentIndex;
+            const isPast = index < currentIndex;
+            const x = xOffset;
+            const y = 35;
+            const accepted = decision.picked;
+            const statusColor = accepted ? '#d5ef79' : '#ed6247';
 
-            let xOffset = 20;
+            ctx.fillStyle = isPast
+                ? (accepted ? '#2a4439' : '#4b302f')
+                : isActive
+                    ? (accepted ? '#344d36' : '#593631')
+                    : '#22324a';
+            ctx.strokeStyle = isActive ? statusColor : isPast ? (accepted ? '#9fbd72' : '#b77769') : '#53677f';
+            ctx.lineWidth = isActive ? 2.5 : 1.1;
+            drawRoundedRect(x, y, CARD_WIDTH, CARD_HEIGHT, 10);
+            ctx.fill();
+            ctx.stroke();
 
-            decisions.forEach((decision, index) => {
-                const isActive = index === currentIndex;
-                const isPast = index < currentIndex;
-                const isFuture = index > currentIndex;
+            const itemLabel = mode === 'coins'
+                ? 'Coin ' + String(decision.itemId)
+                : 'Item ' + String(decision.itemId);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillStyle = '#f1f5f8';
+            ctx.font = '700 14px Inter, sans-serif';
+            ctx.fillText(itemLabel, x + 12, y + 12, 105);
 
-                // Card background
-                const x = xOffset;
-                const y = 40;
+            ctx.fillStyle = accepted ? 'rgba(213, 239, 121, .14)' : 'rgba(237, 98, 71, .15)';
+            ctx.fillRect(x + CARD_WIDTH - 72, y + 10, 60, 20);
+            ctx.fillStyle = accepted ? '#d6f56a' : '#ff9b84';
+            ctx.font = '700 9px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(accepted ? 'PICK' : 'REJECT', x + CARD_WIDTH - 42, y + 16);
 
-                // Glow effect for active card
-                if (isActive) {
-                    const gradient = ctx.createRadialGradient(
-                        x + CARD_WIDTH / 2, y + CARD_HEIGHT / 2, 0,
-                        x + CARD_WIDTH / 2, y + CARD_HEIGHT / 2, CARD_WIDTH / 1.5
-                    );
-                    gradient.addColorStop(0, decision.picked ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)');
-                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(x - 10, y - 10, CARD_WIDTH + 20, CARD_HEIGHT + 20);
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#a9b8c9';
+            ctx.font = '11px ui-monospace, monospace';
+
+            if (mode === 'coins') {
+                const coin = Number(decision.itemId);
+                const count = decision.count ?? 0;
+                const remaining = decision.remaining ?? Math.max(0, amount - (decision.cumulativeWeight ?? 0));
+                ctx.fillText('Quantity       × ' + count, x + 12, y + 44);
+                ctx.fillText('Amount covered ' + (decision.cumulativeWeight ?? 0), x + 12, y + 64);
+                ctx.fillText('Coins used     ' + (decision.currentTotal ?? 0), x + 12, y + 84);
+                ctx.fillStyle = '#d5ef79';
+                ctx.font = '700 11px ui-monospace, monospace';
+                ctx.fillText('Remaining      ' + remaining, x + 12, y + 107);
+                if (Number.isFinite(coin) && coin > amount) {
+                    ctx.fillStyle = '#ff9b84';
+                    ctx.font = '9px Inter, sans-serif';
+                    ctx.fillText('Denomination exceeds target', x + 12, y + 121, CARD_WIDTH - 24);
                 }
+            } else if (mode === 'fractional') {
+                const fraction = decision.fraction ?? 0;
+                ctx.fillText('Fraction      ' + (fraction * 100).toFixed(1) + '%', x + 12, y + 44);
+                ctx.fillText('Weight taken  ' + decision.weight.toFixed(2), x + 12, y + 64);
+                ctx.fillText('Value gained  ' + decision.value.toFixed(2), x + 12, y + 84);
+                ctx.fillText('Density       ' + (Number.isFinite(decision.ratio) ? decision.ratio.toFixed(2) : '∞'), x + 12, y + 104);
+                ctx.fillStyle = '#d5ef79';
+                ctx.font = '700 10px ui-monospace, monospace';
+                ctx.fillText('Total value   ' + decision.currentTotal.toFixed(2), x + 12, y + 121, CARD_WIDTH - 24);
+            } else {
+                ctx.fillText('Weight   ' + decision.weight, x + 12, y + 45);
+                ctx.fillText('Value     ' + decision.value, x + 12, y + 66);
+                ctx.fillText('Ratio     ' + (Number.isFinite(decision.ratio) ? decision.ratio.toFixed(2) : '∞'), x + 12, y + 87);
+                ctx.fillStyle = '#d5ef79';
+                ctx.font = '700 10px ui-monospace, monospace';
+                ctx.fillText('Total value  ' + decision.currentTotal, x + 12, y + 111, CARD_WIDTH - 24);
+            }
 
-                // Card border and background
-                ctx.fillStyle = isPast
-                    ? (decision.picked ? '#064e3b' : '#450a0a')
-                    : isActive
-                        ? (decision.picked ? '#065f46' : '#7f1d1d')
-                        : '#1e293b';
-
-                ctx.strokeStyle = isPast
-                    ? (decision.picked ? '#10b981' : '#ef4444')
-                    : isActive
-                        ? (decision.picked ? '#34d399' : '#f87171')
-                        : '#475569';
-
-                ctx.lineWidth = isActive ? 3 : 1;
-
-                // Rounded rectangle
-                const radius = 12;
+            if (index < decisions.length - 1) {
+                const arrowX = xOffset + CARD_WIDTH + 5;
+                const arrowY = y + CARD_HEIGHT / 2;
+                ctx.strokeStyle = isPast ? '#a9b8c9' : '#53677f';
+                ctx.fillStyle = isPast ? '#a9b8c9' : '#53677f';
+                ctx.lineWidth = 1.6;
                 ctx.beginPath();
-                ctx.moveTo(x + radius, y);
-                ctx.lineTo(x + CARD_WIDTH - radius, y);
-                ctx.quadraticCurveTo(x + CARD_WIDTH, y, x + CARD_WIDTH, y + radius);
-                ctx.lineTo(x + CARD_WIDTH, y + CARD_HEIGHT - radius);
-                ctx.quadraticCurveTo(x + CARD_WIDTH, y + CARD_HEIGHT, x + CARD_WIDTH - radius, y + CARD_HEIGHT);
-                ctx.lineTo(x + radius, y + CARD_HEIGHT);
-                ctx.quadraticCurveTo(x, y + CARD_HEIGHT, x, y + CARD_HEIGHT - radius);
-                ctx.lineTo(x, y + radius);
-                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.moveTo(arrowX, arrowY);
+                ctx.lineTo(arrowX + ARROW_LENGTH, arrowY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(arrowX + ARROW_LENGTH, arrowY);
+                ctx.lineTo(arrowX + ARROW_LENGTH - 7, arrowY - 4);
+                ctx.lineTo(arrowX + ARROW_LENGTH - 7, arrowY + 4);
                 ctx.closePath();
                 ctx.fill();
-                ctx.stroke();
-
-                // Card content
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'top';
-
-                // Item ID
-                ctx.fillStyle = isActive ? '#ffffff' : '#e2e8f0';
-                ctx.font = 'bold 16px Inter';
-                ctx.fillText(`Item ${decision.itemId}`, x + 12, y + 12);
-
-                // Status badge
-                const badgeY = y + 12;
-                const badgeX = x + CARD_WIDTH - 70;
-                ctx.fillStyle = decision.picked
-                    ? 'rgba(16, 185, 129, 0.3)'
-                    : 'rgba(239, 68, 68, 0.3)';
-                ctx.fillRect(badgeX, badgeY, 58, 22);
-
-                ctx.fillStyle = decision.picked ? '#10b981' : '#ef4444';
-                ctx.font = 'bold 11px Inter';
-                ctx.textAlign = 'center';
-                ctx.fillText(
-                    decision.picked ? 'PICK' : 'REJECT',
-                    badgeX + 29,
-                    badgeY + 6
-                );
-
-                // Details
-                ctx.fillStyle = isFuture ? '#64748b' : '#94a3b8';
-                ctx.font = '13px Inter';
-                ctx.textAlign = 'left';
-
-                ctx.fillText(`Weight: ${decision.weight}`, x + 12, y + 44);
-                ctx.fillText(`Value: ${decision.value}`, x + 12, y + 64);
-                ctx.fillText(`Ratio: ${decision.ratio.toFixed(2)}`, x + 12, y + 84);
-
-                // Arrow to next card
-                if (index < decisions.length - 1) {
-                    const arrowX = xOffset + CARD_WIDTH + 10;
-                    const arrowY = y + CARD_HEIGHT / 2;
-
-                    ctx.strokeStyle = isPast ? '#64748b' : '#334155';
-                    ctx.fillStyle = isPast ? '#64748b' : '#334155';
-                    ctx.lineWidth = 2;
-
-                    // Arrow line
-                    ctx.beginPath();
-                    ctx.moveTo(arrowX, arrowY);
-                    ctx.lineTo(arrowX + ARROW_LENGTH, arrowY);
-                    ctx.stroke();
-
-                    // Arrow head
-                    ctx.beginPath();
-                    ctx.moveTo(arrowX + ARROW_LENGTH, arrowY);
-                    ctx.lineTo(arrowX + ARROW_LENGTH - 8, arrowY - 6);
-                    ctx.lineTo(arrowX + ARROW_LENGTH - 8, arrowY + 6);
-                    ctx.closePath();
-                    ctx.fill();
-                }
-
-                xOffset += CARD_WIDTH + ARROW_LENGTH + CARD_SPACING;
-            });
-        };
-
-        const animate = () => {
-            draw();
-            animationRef.current = requestAnimationFrame(animate);
-        };
-
-        animate();
-
-        return () => {
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
             }
-        };
-    }, [decisions, currentIndex]);
+
+            xOffset += CARD_WIDTH + ARROW_LENGTH + CARD_SPACING;
+        });
+        animateCanvasUpdate(canvas);
+    }, [decisions, currentIndex, mode, amount]);
+
+    if (decisions.length === 0) {
+        return (
+            <motion.div
+                className="grid min-h-[210px] w-full place-items-center rounded-xl border border-dashed border-[#405247] bg-[#0d1510] p-6 text-center"
+                initial={false}
+                animate={{ opacity: 1 }}
+            >
+                <div>
+                    <p className="text-sm font-semibold text-[#dce5da]">No decisions yet</p>
+                    <p className="mt-2 text-xs text-[#87958a]">
+                        Play the trace to see {mode === 'coins' ? 'coin selections' : 'accepted and rejected candidates'} appear here.
+                    </p>
+                </div>
+            </motion.div>
+        );
+    }
 
     return (
         <motion.div
-            className="overflow-x-auto bg-slate-950 rounded-xl p-4 border border-slate-800"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
+            className="av-visual-canvas max-w-full overflow-x-auto rounded-xl border border-[#344b67] bg-[#101c2d] p-3"
+            initial={false}
+            animate={{ opacity: 1 }}
+            transition={{ duration: .18 }}
         >
             <canvas
                 ref={canvasRef}
-                className="mx-auto"
-                style={{ imageRendering: 'crisp-edges' }}
+                className="mx-auto block"
+                role="img"
+                aria-label={mode === 'coins'
+                    ? 'Greedy coin change decisions with denomination counts, amount covered, and remaining amount.'
+                    : mode === 'fractional'
+                        ? 'Fractional knapsack decisions with portions, weight taken, value gained, and density.'
+                        : 'Greedy item decisions showing accepted and rejected items with weight, value, and density.'}
             />
         </motion.div>
     );

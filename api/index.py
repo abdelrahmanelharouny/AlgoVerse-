@@ -1,9 +1,12 @@
-from fastapi import FastAPI, HTTPException
+import os
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from mangum import Mangum
 
 # Import algorithm modules from api folder
-from api.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy
+from api.algorithms.knapsack import solve_knapsack_dp, solve_knapsack_greedy, solve_fractional_knapsack
 from api.algorithms.coin_change import solve_coin_change_dp, solve_coin_change_greedy
 from api.algorithms.interval_scheduling import solve_interval_scheduling_greedy, solve_interval_scheduling_dp
 from api.algorithms.matrix_chain import solve_matrix_chain_dp
@@ -21,15 +24,30 @@ from api.models import (
     DijkstraInput, EditDistanceInput, LISInput, RodCuttingInput
 )
 
-app = FastAPI(title="Algorithm Visualizer API")
+app = FastAPI(title="Algorithm Visualizer API", root_path="/api")
+
+@app.exception_handler(ValueError)
+async def handle_algorithm_input_error(request: Request, exc: ValueError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+def _allowed_origins() -> list[str]:
+    configured = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+    return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_allowed_origins(),
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Accept", "Content-Type"],
 )
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 
 @app.get("/")
 def read_root():
@@ -43,6 +61,12 @@ def solve_knapsack(algorithm_type: str, data: KnapsackInput):
         return solve_knapsack_greedy(data)
     else:
         raise HTTPException(status_code=400, detail=f"Unknown algorithm type: {algorithm_type}")
+
+
+
+@app.post("/solve/fractional-knapsack", response_model=AlgorithmResult)
+def solve_fractional_knapsack_endpoint(data: KnapsackInput):
+    return solve_fractional_knapsack(data)
 
 @app.post("/solve/coin-change/{algorithm_type}", response_model=AlgorithmResult)
 def solve_coin_change(algorithm_type: str, data: CoinChangeInput):

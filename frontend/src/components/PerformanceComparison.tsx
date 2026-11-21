@@ -19,11 +19,14 @@ interface ComparisonResult {
 
 interface PerformanceComparisonProps {
     results: ComparisonResult;
+    objective?: 'maximize' | 'minimize';
 }
 
-export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ results }) => {
+export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ results, objective = 'maximize' }) => {
     const greedyOptimal = results.greedy.result === results.dp.result;
-    const winner = results.dp.result >= results.greedy.result ? 'dp' : 'greedy';
+    const winner = objective === 'minimize'
+        ? (results.dp.result <= results.greedy.result ? 'dp' : 'greedy')
+        : (results.dp.result >= results.greedy.result ? 'dp' : 'greedy');
     const difference = Math.abs(results.dp.result - results.greedy.result);
     const percentOff = results.dp.result > 0
         ? ((difference / results.dp.result) * 100).toFixed(1)
@@ -48,7 +51,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                                 {winner === 'dp' ? 'Dynamic Programming' : 'Greedy'} Found Better Solution
                             </div>
                             <div className="text-sm text-slate-300">
-                                {difference} units better ({percentOff}% improvement)
+                                Difference: {difference} units ({percentOff}% relative difference)
                             </div>
                         </div>
                     </div>
@@ -64,14 +67,16 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                     <div className="flex items-center gap-3">
                         <TrendingUp className="text-emerald-400" size={24} />
                         <div>
-                            <div className="font-semibold text-white">Both Algorithms Optimal!</div>
+                            <div className="font-semibold text-white">Both Algorithms Match!</div>
                             <div className="text-sm text-slate-300">
-                                Greedy found the optimal solution - much faster than DP
+                                Greedy and DP returned the same objective value
                             </div>
                         </div>
                     </div>
                 </motion.div>
             )}
+
+            <p className="text-xs leading-relaxed text-slate-500">Timing includes building the visualization trace, so it is not a pure algorithm-runtime benchmark. Use the objective value and trace decisions to compare correctness.</p>
 
             {/* Comparison Grid */}
             <div className="grid md:grid-cols-2 gap-6">
@@ -92,7 +97,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-emerald-400">Greedy Approach</h3>
-                            <p className="text-sm text-slate-400">Fast heuristic</p>
+                            <p className="text-sm text-slate-400">Fast heuristic · {objective === 'minimize' ? 'lower is better' : 'higher is better'}</p>
                         </div>
                     </div>
 
@@ -104,7 +109,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                             {!greedyOptimal && winner !== 'greedy' && (
                                 <div className="flex items-center gap-1 mt-2 text-red-400 text-sm">
                                     <TrendingDown size={16} />
-                                    <span>{difference} below optimal</span>
+                                    <span>{difference} {objective === 'minimize' ? 'more than optimal' : 'below optimal'}</span>
                                 </div>
                             )}
                             {greedyOptimal && (
@@ -120,7 +125,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                             <div className="bg-slate-950 rounded-lg p-3">
                                 <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
                                     <Clock size={14} />
-                                    <span>Time</span>
+                                    <span>Trace build</span>
                                 </div>
                                 <div className="font-mono text-emerald-300 text-sm">{results.greedy.time}</div>
                             </div>
@@ -156,7 +161,7 @@ export const PerformanceComparison: React.FC<PerformanceComparisonProps> = ({ re
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-indigo-400">Dynamic Programming</h3>
-                            <p className="text-sm text-slate-400">Guaranteed optimal</p>
+                            <p className="text-sm text-slate-400">Optimal reference · {objective === 'minimize' ? 'lower is better' : 'higher is better'}</p>
                         </div>
                     </div>
 
