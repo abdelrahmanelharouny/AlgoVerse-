@@ -181,7 +181,6 @@ const ChallengeDetail = () => {
         if (currentIndex < CHALLENGES.length - 1) {
             const nextChallenge = CHALLENGES[currentIndex + 1];
             navigate(`/challenge/${nextChallenge.id}`);
-            window.location.reload(); // Reset state
         } else {
             navigate('/challenge');
         }
