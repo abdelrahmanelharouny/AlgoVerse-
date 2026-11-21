@@ -169,6 +169,62 @@ const Visualizer: React.FC = () => {
         }
     }, [currentStepIndex, steps.length, hasCompleted, soundEnabled, playSuccess]);
 
+    const fetchSolution = useCallback(async (type: AlgorithmType, input: any) => {
+        setIsLoading(true);
+        setLoadError(null);
+        setSteps([]);
+        setAlgorithmResult(null);
+        try {
+            let result;
+            if (type === AlgorithmType.FRACTIONAL_KNAPSACK) {
+                result = await api.solveFractionalKnapsack(input);
+            } else if (type === AlgorithmType.LCS) {
+                result = await api.solveLCS(input);
+            } else if (type === AlgorithmType.DIJKSTRA) {
+                result = await api.solveDijkstra(input);
+            } else if (type === AlgorithmType.PRIMS) {
+                result = await api.solvePrims(input);
+            } else if (type === AlgorithmType.KRUSKALS) {
+                result = await api.solveKruskals(input);
+            } else if (type === AlgorithmType.KNAPSACK || type === AlgorithmType.KNAPSACK_DP) {
+                result = await api.solveKnapsack(AlgorithmType.DP, input);
+            } else if (type === AlgorithmType.GREEDY || type === AlgorithmType.KNAPSACK_GREEDY) {
+                result = await api.solveKnapsack(AlgorithmType.GREEDY, input);
+            } else if (type === AlgorithmType.MATRIX_CHAIN) {
+                result = await api.solveMatrixChain(type, input);
+            } else if (type === AlgorithmType.HUFFMAN) {
+                result = await api.solveHuffman(input);
+            } else if (type === AlgorithmType.INTERVAL_SCHEDULING) {
+                result = await api.solveIntervalScheduling(AlgorithmType.GREEDY, input);
+            } else if (type === AlgorithmType.COIN_CHANGE_DP) {
+                result = await api.solveCoinChange(AlgorithmType.DP, input);
+            } else if (type === AlgorithmType.COIN_CHANGE_GREEDY) {
+                result = await api.solveCoinChange(AlgorithmType.GREEDY, input);
+            } else if (type === AlgorithmType.EDIT_DISTANCE) {
+                result = await api.solveEditDistance(input);
+            } else if (type === AlgorithmType.LIS) {
+                result = await api.solveLIS(input);
+            } else if (type === AlgorithmType.ROD_CUTTING) {
+                result = await api.solveRodCutting(input);
+            }
+
+            if (!result) {
+                throw new Error("No executable solver is registered for this algorithm.");
+            }
+            setSteps(result.steps);
+            setAlgorithmResult(result);
+            setCurrentStepIndex(-1);
+            setHasCompleted(false);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to load this algorithm trace.";
+            setLoadError(message);
+            console.error("Failed to solve algorithm", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+
     // Initialize Algorithm Type & Data
     useEffect(() => {
         if (!algorithm) return;
@@ -320,62 +376,8 @@ const Visualizer: React.FC = () => {
         if (type && defaultInput) {
             fetchSolution(type, defaultInput);
         }
-    }, [algorithm]);
+    }, [algorithm, fetchSolution]);
 
-    const fetchSolution = async (type: AlgorithmType, input: any) => {
-        setIsLoading(true);
-        setLoadError(null);
-        setSteps([]);
-        setAlgorithmResult(null);
-        try {
-            let result;
-            if (type === AlgorithmType.FRACTIONAL_KNAPSACK) {
-                result = await api.solveFractionalKnapsack(input);
-            } else if (type === AlgorithmType.LCS) {
-                result = await api.solveLCS(input);
-            } else if (type === AlgorithmType.DIJKSTRA) {
-                result = await api.solveDijkstra(input);
-            } else if (type === AlgorithmType.PRIMS) {
-                result = await api.solvePrims(input);
-            } else if (type === AlgorithmType.KRUSKALS) {
-                result = await api.solveKruskals(input);
-            } else if (type === AlgorithmType.KNAPSACK || type === AlgorithmType.KNAPSACK_DP) {
-                result = await api.solveKnapsack(AlgorithmType.DP, input);
-            } else if (type === AlgorithmType.GREEDY || type === AlgorithmType.KNAPSACK_GREEDY) {
-                result = await api.solveKnapsack(AlgorithmType.GREEDY, input);
-            } else if (type === AlgorithmType.MATRIX_CHAIN) {
-                result = await api.solveMatrixChain(type, input);
-            } else if (type === AlgorithmType.HUFFMAN) {
-                result = await api.solveHuffman(input);
-            } else if (type === AlgorithmType.INTERVAL_SCHEDULING) {
-                result = await api.solveIntervalScheduling(AlgorithmType.GREEDY, input);
-            } else if (type === AlgorithmType.COIN_CHANGE_DP) {
-                result = await api.solveCoinChange(AlgorithmType.DP, input);
-            } else if (type === AlgorithmType.COIN_CHANGE_GREEDY) {
-                result = await api.solveCoinChange(AlgorithmType.GREEDY, input);
-            } else if (type === AlgorithmType.EDIT_DISTANCE) {
-                result = await api.solveEditDistance(input);
-            } else if (type === AlgorithmType.LIS) {
-                result = await api.solveLIS(input);
-            } else if (type === AlgorithmType.ROD_CUTTING) {
-                result = await api.solveRodCutting(input);
-            }
-
-            if (!result) {
-                throw new Error("No executable solver is registered for this algorithm.");
-            }
-            setSteps(result.steps);
-            setAlgorithmResult(result);
-            setCurrentStepIndex(-1);
-            setHasCompleted(false);
-        } catch (error) {
-            const message = error instanceof Error ? error.message : "Unable to load this algorithm trace.";
-            setLoadError(message);
-            console.error("Failed to solve algorithm", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     // Render Canvas based on Algorithm
     const renderCanvas = () => {
