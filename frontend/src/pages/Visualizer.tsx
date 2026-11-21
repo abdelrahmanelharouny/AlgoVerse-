@@ -469,9 +469,9 @@ const Visualizer: React.FC = () => {
     };
 
     return (
-        <div className="flex h-[calc(100vh-64px)] bg-slate-950 pt-16">
+        <div className="relative flex min-h-[calc(100vh-64px)] flex-col bg-slate-950 pt-16 md:h-[calc(100vh-64px)] md:flex-row md:overflow-hidden">
             {/* Left Sidebar: Controls & Input */}
-            <div className="w-80 border-r border-slate-800 bg-slate-900/50 p-6 flex flex-col gap-6 overflow-y-auto">
+            <div className="w-full max-h-[38vh] shrink-0 overflow-y-auto border-b border-slate-800 bg-slate-900/50 p-4 flex flex-col gap-5 md:max-h-none md:w-80 md:border-b-0 md:border-r md:p-6 md:gap-6">
                 <div>
                     <h2 className="text-xl font-bold text-white mb-2 capitalize">{algorithm?.replace('-', ' ')}</h2>
                     <p className="text-sm text-slate-400">Configure parameters and control visualization.</p>
@@ -564,7 +564,7 @@ const Visualizer: React.FC = () => {
             </div>
 
             {/* Main Canvas Area */}
-            <div className="flex-1 flex flex-col relative overflow-hidden">
+            <div className="relative flex min-h-[520px] min-w-0 flex-1 flex-col overflow-hidden md:min-h-0">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950"></div>
 
                 {/* Progress Bar */}
@@ -603,7 +603,7 @@ const Visualizer: React.FC = () => {
 
             {/* Right Panel: Code & Details */}
             {showCode && (
-                <div className="w-96 border-l border-slate-800 bg-slate-900/50 flex flex-col">
+                <div className="flex h-[58vh] max-h-[680px] w-full shrink-0 flex-col border-t border-slate-800 bg-slate-900/95 md:h-auto md:max-h-none md:w-96 md:border-l md:border-t-0 md:bg-slate-900/50">
                     <div className="p-4 border-b border-slate-800 flex items-center justify-between">
                         <h3 className="font-semibold text-white flex items-center gap-2">
                             <Code size={18} className="text-indigo-400" /> Code Implementation
