@@ -78,6 +78,13 @@ const algorithmInfo: Record<string, {
         keyInsight: 'If characters match, extend diagonal; otherwise take max of left or top.',
         type: 'dp'
     },
+    'coin-change-min': {
+        description: "Find minimum coins for a target amount using the same DP implementation.",
+        timeComplexity: 'O(n × amount)',
+        spaceComplexity: 'O(amount)',
+        keyInsight: 'For each amount, try all coin denominations and keep the smallest reachable count.',
+        type: 'dp'
+    },
     'coin-change': {
         description: "Find minimum number of coins needed to make a target amount.",
         timeComplexity: 'O(n × amount)',
@@ -102,14 +109,14 @@ const algorithmInfo: Record<string, {
     'activity-selection': {
         description: "Select maximum number of non-overlapping activities/intervals.",
         timeComplexity: 'O(n log n)',
-        spaceComplexity: 'O(1)',
+        spaceComplexity: 'O(n)',
         keyInsight: 'Greedy works! Always pick activity that ends earliest - leaves most room for others.',
         type: 'greedy'
     },
     'huffman': {
         description: "Build optimal prefix-free codes for data compression based on character frequencies.",
-        timeComplexity: 'O(n log n)',
-        spaceComplexity: 'O(n)',
+        timeComplexity: 'O(n + k log k)',
+        spaceComplexity: 'O(n + k)',
         keyInsight: 'Always combine two lowest frequency nodes - builds optimal tree bottom-up.',
         type: 'greedy'
     },
@@ -205,11 +212,11 @@ const AlgorithmInfoPanel: React.FC<AlgorithmInfoPanelProps> = ({
 
                         {/* Step type indicator */}
                         <div className="mt-2 flex items-center gap-2">
-                            <span className={`px-2 py-0.5 text-xs rounded ${currentStep.type === 'INIT' ? 'bg-blue-500/20 text-blue-400' :
-                                currentStep.type === 'UPDATE' ? 'bg-emerald-500/20 text-emerald-400' :
-                                    currentStep.type === 'PICK' ? 'bg-green-500/20 text-green-400' :
-                                        currentStep.type === 'REJECT' ? 'bg-red-500/20 text-red-400' :
-                                            currentStep.type === 'HIGHLIGHT' ? 'bg-yellow-500/20 text-yellow-400' :
+                            <span className={`px-2 py-0.5 text-xs rounded ${currentStep.type === 'init' ? 'bg-blue-500/20 text-blue-400' :
+                                currentStep.type === 'update' ? 'bg-emerald-500/20 text-emerald-400' :
+                                    currentStep.type === 'pick' ? 'bg-green-500/20 text-green-400' :
+                                        currentStep.type === 'reject' ? 'bg-red-500/20 text-red-400' :
+                                            currentStep.type === 'highlight' ? 'bg-yellow-500/20 text-yellow-400' :
                                                 'bg-slate-500/20 text-slate-400'
                                 }`}>
                                 {currentStep.type}
