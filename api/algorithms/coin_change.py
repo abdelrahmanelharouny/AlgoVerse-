@@ -1,7 +1,7 @@
 from time import perf_counter
 from typing import List
 
-from from api.models import AlgorithmResult, CoinChangeInput, Metrics, Step, StepType
+from api.models import AlgorithmResult, CoinChangeInput, Metrics, Step, StepType
 
 
 def _validate(data: CoinChangeInput) -> None:
