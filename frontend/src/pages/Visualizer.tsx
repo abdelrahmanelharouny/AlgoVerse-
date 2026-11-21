@@ -575,7 +575,7 @@ const Visualizer: React.FC = () => {
                     totalSteps={steps.length}
                     algorithmName={algorithm || ''}
                 />
-                <AlgorithmResultPanel result={algorithmResult} algorithmName={algorithm || ''} />
+                <AlgorithmResultPanel result={currentStepIndex === steps.length - 1 ? algorithmResult : null} algorithmName={algorithm || ''} />
             </div>
 
             {/* Right Panel: Code & Details */}
