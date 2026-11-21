@@ -85,8 +85,6 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             const nextWidth = Math.max(320, Math.floor(host.getBoundingClientRect().width));
             setWidth(current => current === nextWidth ? current : nextWidth);
         };
-        updateWidth();
-
         if (typeof ResizeObserver !== 'undefined') {
             const observer = new ResizeObserver(updateWidth);
             observer.observe(host);
@@ -227,7 +225,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             ctx.textAlign = 'center';
             ctx.fillText('Add graph nodes and edges to begin', width / 2, height / 2);
         }
-    }, [graph, nodePositions, currentStepData, visitedNodes, width, height]);
+    }, [graph, nodePositions, currentStepData, visitedNodes, width, height, directed, startNode]);
 
     const edgeCount = directed
         ? Object.values(graph).reduce((total, neighbors) => total + Object.keys(neighbors).length, 0)
