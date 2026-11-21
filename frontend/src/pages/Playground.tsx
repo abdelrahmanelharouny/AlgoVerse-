@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
-import { useSearchParams } from 'react-router-dom';
 import { Play, Sparkles, BarChart3, Coins, Package, Pause, RotateCcw, Trophy } from 'lucide-react';
 import { api } from '../utils/api';
 import { AlgorithmType } from '../types';
