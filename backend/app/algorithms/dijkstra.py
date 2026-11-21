@@ -42,7 +42,7 @@ def solve_dijkstra(data: DijkstraInput) -> AlgorithmResult:
             operations += 1
             if neighbor in visited:
                 continue
-            steps.append(Step(type=StepType.HIGHLIGHT, description=f"Check edge {node} → {neighbor} (weight {weight:g})", data={"current_node": node, "checking_neighbor": neighbor, "edge_weight": weight}))
+            steps.append(Step(type=StepType.HIGHLIGHT, description=f"Check edge {node} → {neighbor} (weight {weight:g})", data={"current_node": node, "checking_neighbor": neighbor, "edge_weight": weight, "visited": sorted(visited)}))
             candidate = current_distance + weight
             if candidate < distances[neighbor]:
                 previous = distances[neighbor]
@@ -50,7 +50,7 @@ def solve_dijkstra(data: DijkstraInput) -> AlgorithmResult:
                 predecessors[neighbor] = node
                 heapq.heappush(queue, (candidate, neighbor))
                 snapshot = {key: (None if value == float("inf") else value) for key, value in distances.items()}
-                steps.append(Step(type=StepType.UPDATE, description=f"Improve distance to {neighbor}: {candidate:g}", data={"node": neighbor, "new_dist": candidate, "old_dist": None if previous == float("inf") else previous, "distances": snapshot, "predecessors": dict(predecessors)}))
+                steps.append(Step(type=StepType.UPDATE, description=f"Improve distance to {neighbor}: {candidate:g}", data={"node": neighbor, "new_dist": candidate, "old_dist": None if previous == float("inf") else previous, "distances": snapshot, "predecessors": dict(predecessors), "current_node": node, "visited": sorted(visited)}))
 
     def build_path(target: str) -> List[str]:
         if distances[target] == float("inf"):
