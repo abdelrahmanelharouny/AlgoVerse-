@@ -1,24 +1,29 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, X, Shuffle, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface KnapsackItem {
-    id: string;
+    id: string | number;
     weight: number;
     value: number;
 }
 
 interface KnapsackInputBuilderProps {
     onInputChange: (items: KnapsackItem[], capacity: number) => void;
+    initialData?: { items: KnapsackItem[]; capacity: number };
 }
 
-export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onInputChange }) => {
-    const [capacity, setCapacity] = useState(50);
-    const [items, setItems] = useState<KnapsackItem[]>([
+export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onInputChange, initialData }) => {
+    const [capacity, setCapacity] = useState(initialData?.capacity ?? 50);
+    const [items, setItems] = useState<KnapsackItem[]>(() => initialData?.items.map(item => ({ ...item })) ?? [
         { id: '1', weight: 10, value: 60 },
         { id: '2', weight: 20, value: 100 },
         { id: '3', weight: 30, value: 120 }
     ]);
+
+    const onInputChangeRef = useRef(onInputChange);
+    useEffect(() => { onInputChangeRef.current = onInputChange; }, [onInputChange]);
+    useEffect(() => { onInputChangeRef.current(items, capacity); }, [items, capacity]);
 
     const addItem = () => {
         const newItem: KnapsackItem = {
@@ -28,26 +33,22 @@ export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onIn
         };
         const newItems = [...items, newItem];
         setItems(newItems);
-        onInputChange(newItems, capacity);
     };
 
-    const removeItem = (id: string) => {
+    const removeItem = (id: string | number) => {
         const newItems = items.filter(item => item.id !== id);
         setItems(newItems);
-        onInputChange(newItems, capacity);
     };
 
-    const updateItem = (id: string, field: 'weight' | 'value', value: number) => {
+    const updateItem = (id: string | number, field: 'weight' | 'value', value: number) => {
         const newItems = items.map(item =>
             item.id === id ? { ...item, [field]: value } : item
         );
         setItems(newItems);
-        onInputChange(newItems, capacity);
     };
 
     const updateCapacity = (value: number) => {
         setCapacity(value);
-        onInputChange(items, value);
     };
 
     const randomizeItems = () => {
@@ -57,7 +58,6 @@ export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onIn
             value: Math.floor(Math.random() * 150) + 10
         }));
         setItems(newItems);
-        onInputChange(newItems, capacity);
     };
 
     const loadPreset = (preset: 'easy' | 'medium' | 'hard') => {
@@ -98,7 +98,6 @@ export const KnapsackInputBuilder: React.FC<KnapsackInputBuilderProps> = ({ onIn
 
         setItems(newItems);
         setCapacity(newCapacity);
-        onInputChange(newItems, newCapacity);
     };
 
     return (

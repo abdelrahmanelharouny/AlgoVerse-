@@ -1,68 +1,47 @@
-import sys
-from app.models import AlgorithmResult, Step, StepType, Metrics
-import time
+from time import perf_counter
+from typing import List
 
-def solve_matrix_chain_dp(data):
-    start_time = time.time()
-    dims = data.dimensions
-    n = len(dims) - 1  # Number of matrices
-    
-    # m[i][j] stores min multiplications for A[i]...A[j]
-    # s[i][j] stores the optimal split index k
-    m = [[0 for _ in range(n + 1)] for _ in range(n + 1)]
-    s = [[0 for _ in range(n + 1)] for _ in range(n + 1)]
-    
-    steps = []
-    
-    # Init step
-    steps.append(Step(
-        type=StepType.INIT,
-        description=f"Initialized DP table for {n} matrices.",
-        data={"rows": n + 1, "cols": n + 1, "dimensions": dims}
-    ))
+from app.models import AlgorithmResult, MatrixChainInput, Metrics, Step, StepType
 
-    # l is chain length
-    for l in range(2, n + 1):
-        for i in range(1, n - l + 2):
-            j = i + l - 1
-            m[i][j] = sys.maxsize
-            
-            steps.append(Step(
-                type=StepType.HIGHLIGHT,
-                description=f"Computing min cost for chain A{i}...A{j} (Length {l})",
-                data={"i": i, "j": j}
-            ))
-            
-            # Try every split k
-            for k in range(i, j):
-                # cost = cost(left) + cost(right) + cost(multiplication)
-                q = m[i][k] + m[k+1][j] + dims[i-1] * dims[k] * dims[j]
-                
-                steps.append(Step(
-                    type=StepType.INFO,
-                    description=f"Checking split at k={k}: Cost = {m[i][k]} + {m[k+1][j]} + {dims[i-1]}*{dims[k]}*{dims[j]} = {q}",
-                    data={"i": i, "j": j, "k": k, "cost": q}
-                ))
-                
-                if q < m[i][j]:
-                    m[i][j] = q
-                    s[i][j] = k
-                    steps.append(Step(
-                        type=StepType.UPDATE,
-                        description=f"New min cost for A{i}...A{j} is {q} (Split at k={k})",
-                        data={"i": i, "j": j, "value": q, "split": k}
-                    ))
-    
-    total_time = time.time() - start_time
-    
+
+def solve_matrix_chain_dp(data: MatrixChainInput) -> AlgorithmResult:
+    """Minimum scalar multiplications and optimal parenthesization."""
+    dimensions = data.dimensions
+    if len(dimensions) < 2 or any(value <= 0 for value in dimensions):
+        raise ValueError("Provide at least two positive matrix dimensions")
+    started = perf_counter()
+    n = len(dimensions) - 1
+    cost = [[0] * (n + 1) for _ in range(n + 1)]
+    split = [[0] * (n + 1) for _ in range(n + 1)]
+    steps: List[Step] = [Step(type=StepType.INIT, description=f"Initialize matrix-chain DP for {n} matrices", data={"rows": n + 1, "cols": n + 1, "dimensions": dimensions})]
+    operations = 0
+
+    for chain_length in range(2, n + 1):
+        for left in range(1, n - chain_length + 2):
+            right = left + chain_length - 1
+            cost[left][right] = float("inf")
+            steps.append(Step(type=StepType.HIGHLIGHT, description=f"Optimize matrix chain A{left}…A{right}", data={"i": left, "j": right}))
+            for middle in range(left, right):
+                operations += 1
+                candidate = cost[left][middle] + cost[middle + 1][right] + dimensions[left - 1] * dimensions[middle] * dimensions[right]
+                steps.append(Step(type=StepType.INFO, description=f"Try split after A{middle}: {candidate} scalar multiplications", data={"i": left, "j": right, "k": middle, "cost": candidate}))
+                if candidate < cost[left][right]:
+                    cost[left][right] = candidate
+                    split[left][right] = middle
+                    steps.append(Step(type=StepType.UPDATE, description=f"New minimum cost for A{left}…A{right}: {candidate}", data={"i": left, "j": right, "value": candidate, "split": middle}))
+
+    def parenthesize(left: int, right: int) -> str:
+        if left == right:
+            return f"A{left}"
+        middle = split[left][right]
+        return f"({parenthesize(left, middle)} × {parenthesize(middle + 1, right)})"
+
+    optimal_order = parenthesize(1, n)
+    minimum_cost = cost[1][n]
+    steps.append(Step(type=StepType.SOLUTION, description=f"Minimum cost is {minimum_cost}; optimal order is {optimal_order}", data={"minimum_cost": minimum_cost, "parenthesization": optimal_order, "split_table": split}))
+    elapsed = perf_counter() - started
     return AlgorithmResult(
-        steps=steps,
-        result_value=m[1][n],
-        selected_items=[], # Not used for this problem
-        metrics=Metrics(
-            time_taken=total_time,
-            space_complexity="O(n^2)",
-            time_complexity="O(n^3)",
-            step_count=len(steps)
-        )
+        steps=steps, result_value=minimum_cost, selected_items=[],
+        result_data={"minimum_cost": minimum_cost, "parenthesization": optimal_order, "split_table": split, "matrix_count": n},
+        metrics=Metrics(time_taken=elapsed, time_complexity="O(n³)", space_complexity="O(n²)", step_count=len(steps), operation_count=operations)
     )

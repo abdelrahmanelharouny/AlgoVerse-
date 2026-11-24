@@ -17,17 +17,17 @@ interface AlgorithmData {
 }
 
 const algorithms: AlgorithmData[] = [
-    { id: 'dijkstra', name: "Dijkstra's Algorithm", category: 'Graph', timeComplexity: 'O((V+E) log V)', spaceComplexity: 'O(V)', greedyWorks: true, bestCase: 'O(V)', avgCase: 'O((V+E) log V)', worstCase: 'O(V²)', description: 'Shortest path with non-negative weights' },
-    { id: 'prims', name: "Prim's MST", category: 'Graph', timeComplexity: 'O(E log V)', spaceComplexity: 'O(V)', greedyWorks: true, bestCase: 'O(V)', avgCase: 'O(E log V)', worstCase: 'O(V²)', description: 'Minimum Spanning Tree' },
-    { id: 'kruskals', name: "Kruskal's MST", category: 'Graph', timeComplexity: 'O(E log E)', spaceComplexity: 'O(V)', greedyWorks: true, bestCase: 'O(E)', avgCase: 'O(E log E)', worstCase: 'O(E log E)', description: 'MST using Union-Find' },
+    { id: 'dijkstra', name: "Dijkstra's Algorithm", category: 'Graph', timeComplexity: 'O((V+E) log V)', spaceComplexity: 'O(V + E)', greedyWorks: true, bestCase: 'O((V+E) log V)', avgCase: 'O((V+E) log V)', worstCase: 'O((V+E) log V)', description: 'Shortest path with non-negative weights' },
+    { id: 'prims', name: "Prim's MST", category: 'Graph', timeComplexity: 'O(E log V)', spaceComplexity: 'O(V + E)', greedyWorks: true, bestCase: 'O(V)', avgCase: 'O(E log V)', worstCase: 'O(V²)', description: 'Minimum Spanning Tree' },
+    { id: 'kruskals', name: "Kruskal's MST", category: 'Graph', timeComplexity: 'O(E log E)', spaceComplexity: 'O(V + E)', greedyWorks: true, bestCase: 'O(E log E)', avgCase: 'O(E log E)', worstCase: 'O(E log E)', description: 'MST using Union-Find' },
     { id: '0-1-knapsack', name: '0/1 Knapsack', category: 'DP', timeComplexity: 'O(n × W)', spaceComplexity: 'O(n × W)', greedyWorks: false, bestCase: 'O(n × W)', avgCase: 'O(n × W)', worstCase: 'O(n × W)', description: 'Item selection with weight constraint' },
-    { id: 'fractional-knapsack', name: 'Fractional Knapsack', category: 'Greedy', timeComplexity: 'O(n log n)', spaceComplexity: 'O(1)', greedyWorks: true, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n log n)', description: 'Item selection, fractional allowed' },
-    { id: 'lcs', name: 'Longest Common Subsequence', category: 'DP', timeComplexity: 'O(m × n)', spaceComplexity: 'O(m × n)', greedyWorks: false, bestCase: 'O(min(m,n))', avgCase: 'O(m × n)', worstCase: 'O(m × n)', description: 'Find LCS of two strings' },
+    { id: 'fractional-knapsack', name: 'Fractional Knapsack', category: 'Greedy', timeComplexity: 'O(n log n)', spaceComplexity: 'O(n)', greedyWorks: true, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n log n)', description: 'Item selection, fractional allowed' },
+    { id: 'lcs', name: 'Longest Common Subsequence', category: 'DP', timeComplexity: 'O(m × n)', spaceComplexity: 'O(m × n)', greedyWorks: false, bestCase: 'O(m × n)', avgCase: 'O(m × n)', worstCase: 'O(m × n)', description: 'Find LCS of two strings' },
     { id: 'coin-change', name: 'Coin Change', category: 'DP', timeComplexity: 'O(n × amount)', spaceComplexity: 'O(amount)', greedyWorks: false, bestCase: 'O(amount)', avgCase: 'O(n × amount)', worstCase: 'O(n × amount)', description: 'Min coins to make amount' },
-    { id: 'edit-distance', name: 'Edit Distance', category: 'DP', timeComplexity: 'O(m × n)', spaceComplexity: 'O(m × n)', greedyWorks: false, bestCase: 'O(min(m,n))', avgCase: 'O(m × n)', worstCase: 'O(m × n)', description: 'Min edits to transform string' },
-    { id: 'lis', name: 'Longest Increasing Subsequence', category: 'DP', timeComplexity: 'O(n log n)', spaceComplexity: 'O(n)', greedyWorks: false, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n²)', description: 'Longest increasing subsequence' },
-    { id: 'activity-selection', name: 'Activity Selection', category: 'Greedy', timeComplexity: 'O(n log n)', spaceComplexity: 'O(1)', greedyWorks: true, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n log n)', description: 'Max non-overlapping activities' },
-    { id: 'huffman', name: 'Huffman Coding', category: 'Greedy', timeComplexity: 'O(n log n)', spaceComplexity: 'O(n)', greedyWorks: true, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n log n)', description: 'Optimal prefix codes' },
+    { id: 'edit-distance', name: 'Edit Distance', category: 'DP', timeComplexity: 'O(m × n)', spaceComplexity: 'O(m × n)', greedyWorks: false, bestCase: 'O(m × n)', avgCase: 'O(m × n)', worstCase: 'O(m × n)', description: 'Min edits to transform string' },
+    { id: 'lis', name: 'Longest Increasing Subsequence', category: 'DP', timeComplexity: 'O(n²)', spaceComplexity: 'O(n)', greedyWorks: false, bestCase: 'O(n²)', avgCase: 'O(n²)', worstCase: 'O(n²)', description: 'Longest increasing subsequence' },
+    { id: 'activity-selection', name: 'Activity Selection', category: 'Greedy', timeComplexity: 'O(n log n)', spaceComplexity: 'O(n)', greedyWorks: true, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n log n)', description: 'Max non-overlapping activities' },
+    { id: 'huffman', name: 'Huffman Coding', category: 'Greedy', timeComplexity: 'O(n + k log k + B)', spaceComplexity: 'O(k + B)', greedyWorks: true, bestCase: 'O(n)', avgCase: 'O(n log n)', worstCase: 'O(n log n)', description: 'Optimal prefix codes' },
     { id: 'matrix-chain', name: 'Matrix Chain Multiplication', category: 'DP', timeComplexity: 'O(n³)', spaceComplexity: 'O(n²)', greedyWorks: false, bestCase: 'O(n²)', avgCase: 'O(n³)', worstCase: 'O(n³)', description: 'Optimal matrix multiplication order' },
 ];
 
@@ -85,6 +85,7 @@ const Analysis = () => {
     const algo2 = algorithms.find(a => a.id === compareAlgos[1]);
 
     const currentDecisionNode = decisionTree.find(n => n.id === decisionPath[decisionPath.length - 1]);
+    const decisionAlgorithm = decisionResult ? algorithms.find(a => a.id === decisionResult) : undefined;
 
     const handleDecisionChoice = (option: { next: string | null; result?: string }) => {
         if (option.result) {
@@ -130,14 +131,20 @@ const Analysis = () => {
                     </div>
                 ) : (
                     <div className="bg-slate-800/50 rounded-lg p-6">
-                        <p className="text-emerald-400 text-lg font-semibold mb-2">✅ Recommended: {algorithms.find(a => a.id === decisionResult)?.name || decisionResult}</p>
-                        <p className="text-slate-300 mb-4">{algorithms.find(a => a.id === decisionResult)?.description}</p>
+                        <p className={`text-lg font-semibold mb-2 ${decisionAlgorithm ? 'text-emerald-400' : 'text-amber-300'}`}>
+                            {decisionAlgorithm ? 'Recommended' : 'Not implemented yet'}: {decisionAlgorithm?.name || (decisionResult || '').replaceAll('-', ' ')}
+                        </p>
+                        <p className="text-slate-300 mb-4">
+                            {decisionAlgorithm?.description || 'This algorithm is part of the learning roadmap, but an executable visualizer is not available in this version.'}
+                        </p>
                         <div className="flex gap-3">
-                            <Link to={`/visualizer/${decisionResult}`}>
-                                <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-semibold flex items-center gap-2">
-                                    <Play size={16} /> Visualize
-                                </button>
-                            </Link>
+                            {decisionAlgorithm && (
+                                <Link to={`/visualizer/${decisionResult}`}>
+                                    <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-semibold flex items-center gap-2">
+                                        <Play size={16} /> Visualize
+                                    </button>
+                                </Link>
+                            )}
                             <button onClick={resetDecision} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">Try Again</button>
                         </div>
                     </div>

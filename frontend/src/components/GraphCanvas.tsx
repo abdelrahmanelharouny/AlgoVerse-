@@ -1,102 +1,141 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+
+interface GraphStepData {
+    current_node?: string;
+    checking_neighbor?: string;
+    start_node?: string;
+    visited?: string[];
+    distances?: Record<string, number | null>;
+    mst_edges?: Array<{ u: string; v: string; weight?: number }>;
+    path_edges?: Array<{ u: string; v: string }>;
+}
 
 interface GraphCanvasProps {
     graph: Record<string, Record<string, number>>;
-    currentStepData?: any;
+    currentStepData?: GraphStepData;
     visitedNodes?: string[];
+    startNode?: string;
+    directed?: boolean;
+    accumulatedMstEdges?: Array<{ u: string; v: string; weight?: number }>;
+    accumulatedPathEdges?: Array<{ u: string; v: string; weight?: number }>;
+    distanceLabels?: Record<string, number | null>;
 }
 
-// Force-directed layout simulation
-const calculateLayout = (graph: Record<string, Record<string, number>>, width: number, height: number) => {
+interface Position { x: number; y: number; }
+
+const edgeKey = (from: string, to: string, directed = false) =>
+    directed ? from + '\u0000' + to
+        : [from, to].sort((left, right) => left.localeCompare(right)).join('\u0000');
+
+const animateCanvasUpdate = (canvas: HTMLCanvasElement) => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (!reduceMotion && typeof canvas.animate === 'function') {
+        canvas.animate([{ opacity: 0.72 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
+    }
+};
+
+const calculateLayout = (
+    graph: Record<string, Record<string, number>>,
+    width: number,
+    height: number
+): Record<string, Position> => {
     const nodes = Object.keys(graph);
-    if (nodes.length === 0) return {};
+    const positions: Record<string, Position> = {};
+    if (nodes.length === 0) return positions;
 
-    // Initialize positions in a circle
-    const positions: Record<string, { x: number; y: number }> = {};
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.min(width, height) * 0.35;
+    const compact = width < 460;
+    const nodeRadius = nodes.length > 34 ? 11 : nodes.length > 22 ? 13 : nodes.length > 14 ? 16 : compact ? 20 : 24;
+    const maxRadius = Math.max(34, Math.min(width, height) / 2 - nodeRadius - 18);
+    const spacing = nodeRadius * 2 + (nodes.length > 22 ? 8 : 18);
 
-    nodes.forEach((node, i) => {
-        const angle = (2 * Math.PI * i) / nodes.length - Math.PI / 2;
-        positions[node] = {
-            x: centerX + radius * Math.cos(angle),
-            y: centerY + radius * Math.sin(angle)
-        };
-    });
-
-    // Simple force-directed relaxation (few iterations)
-    const iterations = 50;
-    const repulsion = 5000;
-    const attraction = 0.05;
-
-    for (let iter = 0; iter < iterations; iter++) {
-        const forces: Record<string, { fx: number; fy: number }> = {};
-        nodes.forEach(n => forces[n] = { fx: 0, fy: 0 });
-
-        // Repulsion between all nodes
-        for (let i = 0; i < nodes.length; i++) {
-            for (let j = i + 1; j < nodes.length; j++) {
-                const n1 = nodes[i], n2 = nodes[j];
-                const dx = positions[n2].x - positions[n1].x;
-                const dy = positions[n2].y - positions[n1].y;
-                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                const force = repulsion / (dist * dist);
-                const fx = (dx / dist) * force;
-                const fy = (dy / dist) * force;
-                forces[n1].fx -= fx;
-                forces[n1].fy -= fy;
-                forces[n2].fx += fx;
-                forces[n2].fy += fy;
-            }
-        }
-
-        // Attraction along edges
-        nodes.forEach(n1 => {
-            Object.keys(graph[n1] || {}).forEach(n2 => {
-                if (positions[n2]) {
-                    const dx = positions[n2].x - positions[n1].x;
-                    const dy = positions[n2].y - positions[n1].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                    const force = dist * attraction;
-                    forces[n1].fx += (dx / dist) * force;
-                    forces[n1].fy += (dy / dist) * force;
-                }
-            });
+    if (nodes.length <= 8) {
+        const radius = maxRadius * 0.82;
+        nodes.forEach((node, index) => {
+            const angle = (2 * Math.PI * index) / nodes.length - Math.PI / 2;
+            positions[node] = { x: width / 2 + radius * Math.cos(angle), y: height / 2 + radius * Math.sin(angle) };
         });
-
-        // Apply forces with damping
-        const damping = 0.8 - (iter / iterations) * 0.5;
-        nodes.forEach(n => {
-            positions[n].x += forces[n].fx * damping;
-            positions[n].y += forces[n].fy * damping;
-            // Keep in bounds
-            positions[n].x = Math.max(60, Math.min(width - 60, positions[n].x));
-            positions[n].y = Math.max(60, Math.min(height - 60, positions[n].y));
-        });
+        return positions;
     }
 
+    // Concentric rings maintain separation on narrow screens and dense graphs.
+    const rings = [0.28, 0.52, 0.76, 0.98].map(fraction => {
+        const radius = maxRadius * fraction;
+        const capacity = Math.max(1, Math.floor((2 * Math.PI * radius) / spacing));
+        return { radius, capacity };
+    });
+
+    let cursor = 0;
+    for (const ring of rings) {
+        if (cursor >= nodes.length) break;
+        const count = Math.min(nodes.length - cursor, ring.capacity);
+        for (let index = 0; index < count; index++) {
+            const node = nodes[cursor + index];
+            const angle = (2 * Math.PI * index) / count - Math.PI / 2 + (cursor % 2 ? Math.PI / count : 0);
+            positions[node] = { x: width / 2 + ring.radius * Math.cos(angle), y: height / 2 + ring.radius * Math.sin(angle) };
+        }
+        cursor += count;
+    }
+
+    if (cursor < nodes.length) {
+        const remaining = nodes.length - cursor;
+        for (let index = 0; index < remaining; index++) {
+            const node = nodes[cursor + index];
+            const angle = (2 * Math.PI * index) / remaining - Math.PI / 2;
+            positions[node] = { x: width / 2 + maxRadius * Math.cos(angle), y: height / 2 + maxRadius * Math.sin(angle) };
+        }
+    }
     return positions;
 };
 
-const GraphCanvas: React.FC<GraphCanvasProps> = ({ graph, currentStepData, visitedNodes = [] }) => {
+const GraphCanvas: React.FC<GraphCanvasProps> = ({
+    graph,
+    currentStepData,
+    visitedNodes = [],
+    startNode,
+    directed = false,
+    accumulatedMstEdges = [],
+    accumulatedPathEdges = [],
+    distanceLabels = {}
+}) => {
+    const hostRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [dimensions] = useState({ width: 800, height: 450 });
+    const [width, setWidth] = useState(800);
 
-    // Calculate layout once per graph change
-    const nodePositions = useMemo(() => {
-        return calculateLayout(graph, dimensions.width, dimensions.height);
-    }, [graph, dimensions]);
+    useEffect(() => {
+        const host = hostRef.current;
+        if (!host) return;
+        const updateWidth = () => {
+            const measured = Math.floor(host.getBoundingClientRect().width);
+            const nextWidth = Math.max(280, measured || 800);
+            setWidth(current => current === nextWidth ? current : nextWidth);
+        };
+        updateWidth();
 
-    // Get edge states
-    const getEdgeState = (from: string, to: string) => {
-        const isActiveEdge = currentStepData?.checking_neighbor === to && currentStepData?.current_node === from;
-        const isMSTEdge = (currentStepData?.mst_edges || []).some((e: any) =>
-            (e.u === from && e.v === to) || (e.u === to && e.v === from)
-        );
-        const isPathEdge = currentStepData?.path?.includes(from) && currentStepData?.path?.includes(to);
-        return { isActiveEdge, isMSTEdge, isPathEdge };
-    };
+        if (typeof ResizeObserver !== 'undefined') {
+            const observer = new ResizeObserver(updateWidth);
+            observer.observe(host);
+            return () => observer.disconnect();
+        }
+
+        window.addEventListener('resize', updateWidth);
+        return () => window.removeEventListener('resize', updateWidth);
+    }, []);
+
+    const height = Math.max(280, Math.min(540, Math.round(width * .58)));
+    const nodePositions = useMemo(
+        () => calculateLayout(graph, width, height),
+        [graph, width, height]
+    );
+    const mstEdges = currentStepData?.mst_edges ?? accumulatedMstEdges;
+    const pathEdges = currentStepData?.path_edges ?? accumulatedPathEdges;
+    const distances = currentStepData?.distances ?? distanceLabels;
+    const mstEdgeKeys = useMemo(() => new Set(mstEdges.map(edge => edgeKey(edge.u, edge.v))), [mstEdges]);
+    const pathEdgeKeys = useMemo(() => new Set(pathEdges.map(edge => edgeKey(edge.u, edge.v, directed))), [pathEdges, directed]);
+    const edgeCount = useMemo(() => directed
+        ? Object.values(graph).reduce((total, neighbors) => total + Object.keys(neighbors).length, 0)
+        : new Set(Object.entries(graph).flatMap(([from, neighbors]) =>
+            Object.keys(neighbors).map(to => edgeKey(from, to))
+        )).size, [graph, directed]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -104,150 +143,165 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({ graph, currentStepData, visit
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const width = dimensions.width;
-        const height = dimensions.height;
-        const dpr = window.devicePixelRatio || 1;
-
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
-        ctx.scale(dpr, dpr);
-
-        // Background
-        ctx.fillStyle = '#0f172a';
+        const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        canvas.style.width = '100%';
+        canvas.style.height = 'auto';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = '#101c2d';
         ctx.fillRect(0, 0, width, height);
 
-        // Draw edges first (so nodes are on top)
+        const activeFrom = currentStepData?.current_node;
+        const activeTo = currentStepData?.checking_neighbor;
+        const visited = new Set<string>([
+            ...visitedNodes,
+            ...(currentStepData?.visited ?? [])
+        ]);
         const drawnEdges = new Set<string>();
+        const nodeCount = Object.keys(graph).length;
+        const nodeRadius = nodeCount > 34 ? 11 : nodeCount > 22 ? 13 : nodeCount > 14 ? 16 : width < 460 ? 20 : 24;
+        const edgeFontSize = nodeCount > 18 ? 10 : 11;
 
         Object.entries(graph).forEach(([from, neighbors]) => {
-            const startPos = nodePositions[from];
-            if (!startPos) return;
-
+            const start = nodePositions[from];
+            if (!start) return;
             Object.entries(neighbors).forEach(([to, weight]) => {
-                const endPos = nodePositions[to];
-                if (!endPos) return;
+                const end = nodePositions[to];
+                if (!end) return;
+                const key = edgeKey(from, to, directed);
+                if (!directed && drawnEdges.has(key)) return;
+                drawnEdges.add(key);
 
-                // Avoid drawing same edge twice for undirected
-                const edgeKey = [from, to].sort().join('-');
-                if (drawnEdges.has(edgeKey)) return;
-                drawnEdges.add(edgeKey);
+                const isMst = mstEdgeKeys.has(key);
+                const isPath = pathEdgeKeys.has(key);
+                const isActive = activeFrom === from && activeTo === to;
+                const hasReverseEdge = directed && Object.prototype.hasOwnProperty.call(graph[to] ?? {}, from);
 
-                const { isActiveEdge, isMSTEdge } = getEdgeState(from, to);
-
-                // Draw edge
-                ctx.beginPath();
-                ctx.moveTo(startPos.x, startPos.y);
-                ctx.lineTo(endPos.x, endPos.y);
-
-                if (isMSTEdge) {
-                    ctx.strokeStyle = '#22c55e'; // green
-                    ctx.lineWidth = 4;
-                } else if (isActiveEdge) {
-                    ctx.strokeStyle = '#f59e0b'; // amber
-                    ctx.lineWidth = 3;
-                } else {
-                    ctx.strokeStyle = '#475569'; // slate-600
-                    ctx.lineWidth = 2;
+                let controlX = (start.x + end.x) / 2;
+                let controlY = (start.y + end.y) / 2;
+                if (hasReverseEdge) {
+                    const forward = from.localeCompare(to) < 0;
+                    const canonicalStart = forward ? start : end;
+                    const canonicalEnd = forward ? end : start;
+                    const canonicalDx = canonicalEnd.x - canonicalStart.x;
+                    const canonicalDy = canonicalEnd.y - canonicalStart.y;
+                    const canonicalLength = Math.max(1, Math.hypot(canonicalDx, canonicalDy));
+                    const offset = (forward ? 1 : -1) * Math.min(27, Math.max(13, canonicalLength * .13));
+                    controlX += (-canonicalDy / canonicalLength) * offset;
+                    controlY += (canonicalDx / canonicalLength) * offset;
                 }
-                ctx.stroke();
 
-                // Draw weight label
-                const midX = (startPos.x + endPos.x) / 2;
-                const midY = (startPos.y + endPos.y) / 2;
-
-                // Background for weight
-                ctx.fillStyle = '#1e293b';
+                const edgeColor = isMst ? '#d5ef79' : isPath ? '#78b8ff' : isActive ? '#ed765f' : '#53677f';
                 ctx.beginPath();
-                ctx.arc(midX, midY, 14, 0, 2 * Math.PI);
-                ctx.fill();
+                ctx.moveTo(start.x, start.y);
+                if (hasReverseEdge) ctx.quadraticCurveTo(controlX, controlY, end.x, end.y);
+                else ctx.lineTo(end.x, end.y);
+                ctx.strokeStyle = edgeColor;
+                ctx.lineWidth = isMst || isPath ? 3.5 : isActive ? 3 : 1.7;
+                ctx.globalAlpha = isMst || isPath || isActive ? 1 : .78;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
 
-                // Weight text
-                ctx.fillStyle = isMSTEdge ? '#22c55e' : isActiveEdge ? '#f59e0b' : '#94a3b8';
-                ctx.font = 'bold 12px Inter, sans-serif';
+                if (directed) {
+                    const tangentX = end.x - (hasReverseEdge ? controlX : start.x);
+                    const tangentY = end.y - (hasReverseEdge ? controlY : start.y);
+                    const angle = Math.atan2(tangentY, tangentX);
+                    const tipX = end.x - Math.cos(angle) * (nodeRadius + 3);
+                    const tipY = end.y - Math.sin(angle) * (nodeRadius + 3);
+                    const wing = 7;
+                    ctx.beginPath();
+                    ctx.moveTo(tipX, tipY);
+                    ctx.lineTo(tipX - Math.cos(angle - Math.PI / 6) * wing, tipY - Math.sin(angle - Math.PI / 6) * wing);
+                    ctx.lineTo(tipX - Math.cos(angle + Math.PI / 6) * wing, tipY - Math.sin(angle + Math.PI / 6) * wing);
+                    ctx.closePath();
+                    ctx.fillStyle = edgeColor;
+                    ctx.fill();
+                }
+
+                const midX = hasReverseEdge ? .25 * start.x + .5 * controlX + .25 * end.x : (start.x + end.x) / 2;
+                const midY = hasReverseEdge ? .25 * start.y + .5 * controlY + .25 * end.y : (start.y + end.y) / 2;
+                ctx.fillStyle = '#142238';
+                ctx.beginPath();
+                ctx.arc(midX, midY, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#425873';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.fillStyle = isMst ? '#d5ef79' : '#dce6f0';
+                ctx.font = '650 ' + edgeFontSize + 'px Inter, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(weight?.toString() || '', midX, midY);
+                ctx.fillText(String(weight), midX, midY);
             });
         });
 
-        // Draw nodes
-        Object.entries(nodePositions).forEach(([node, pos]) => {
-            const isVisited = visitedNodes.includes(node) || currentStepData?.visited?.includes(node);
+        const visibleStartNode = currentStepData?.start_node ?? startNode;
+        Object.entries(nodePositions).forEach(([node, position]) => {
             const isCurrent = currentStepData?.current_node === node;
-            const isStart = currentStepData?.start_node === node;
-            const isNeighbor = currentStepData?.checking_neighbor === node;
+            const isChecking = currentStepData?.checking_neighbor === node;
+            const isStart = visibleStartNode === node;
+            const isVisited = visited.has(node);
 
-            // Node circle
             ctx.beginPath();
-            ctx.arc(pos.x, pos.y, 28, 0, 2 * Math.PI);
-
-            if (isCurrent) {
-                ctx.fillStyle = '#8b5cf6'; // purple
-            } else if (isNeighbor) {
-                ctx.fillStyle = '#f59e0b'; // amber
-            } else if (isStart) {
-                ctx.fillStyle = '#3b82f6'; // blue
-            } else if (isVisited) {
-                ctx.fillStyle = '#22c55e'; // green
-            } else {
-                ctx.fillStyle = '#334155'; // slate-700
-            }
+            ctx.arc(position.x, position.y, nodeRadius, 0, Math.PI * 2);
+            ctx.fillStyle = isCurrent ? '#ed6247'
+                : isChecking ? '#f2b75c'
+                    : isStart ? '#d5ef79'
+                        : isVisited ? '#326ca2' : '#263a55';
             ctx.fill();
-
-            // Border
-            ctx.strokeStyle = isCurrent ? '#a78bfa' : isNeighbor ? '#fbbf24' : '#64748b';
-            ctx.lineWidth = 3;
+            ctx.strokeStyle = isCurrent ? '#ffb7a8' : isChecking ? '#ffe0a0' : isStart ? '#efffb2' : isVisited ? '#8bc7ff' : '#536b87';
+            ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Node label
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 16px Inter, sans-serif';
+            ctx.fillStyle = isStart ? '#18230f' : '#f1f5f8';
+            ctx.font = '700 ' + (node.length > 2 ? Math.max(8, 12 - node.length * .45) : 13) + 'px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(node, pos.x, pos.y);
+            ctx.fillText(node, position.x, position.y, nodeRadius * 1.65);
 
-            // Distance label (for Dijkstra)
-            if (currentStepData?.distances && currentStepData.distances[node] !== undefined) {
-                const dist = currentStepData.distances[node];
-                const distText = dist >= 9999 ? '∞' : dist.toString();
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = '11px Inter, sans-serif';
-                ctx.fillText(`d=${distText}`, pos.x, pos.y + 40);
+            if (Object.prototype.hasOwnProperty.call(distances, node)) {
+                const distance = distances[node];
+                const label = distance === null || !Number.isFinite(distance) ? '∞' : String(distance);
+                ctx.fillStyle = '#a9b8c9';
+                ctx.font = '10px ui-monospace, monospace';
+                ctx.fillText('d=' + label, position.x, position.y + nodeRadius + 12);
             }
         });
 
-    }, [graph, nodePositions, currentStepData, visitedNodes, dimensions]);
+        if (nodeCount === 0) {
+            ctx.fillStyle = '#b7c5d4';
+            ctx.font = '13px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Add graph nodes and edges to begin', width / 2, height / 2);
+        }
+        animateCanvasUpdate(canvas);
+    }, [graph, nodePositions, currentStepData, visitedNodes, width, height, directed, startNode, mstEdgeKeys, pathEdgeKeys, distances]);
 
     return (
-        <div className="relative w-full h-full bg-slate-950 rounded-xl overflow-hidden">
+        <div ref={hostRef} className="av-visual-canvas w-full min-w-0 overflow-hidden rounded-xl border border-[#344b67] bg-[#101c2d]">
+            <div className="av-graph-meta">
+                <div className="av-graph-meta__legend" role="list" aria-label="Graph visualization legend">
+                    <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#d5ef79' }} />Start</span>
+                    <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#ed6247' }} />Current</span>
+                    <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#326ca2', border: '1px solid #8bc7ff' }} />Visited</span>
+                    <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#f2b75c' }} />Checking</span>
+                    {directed
+                        ? <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#78b8ff' }} />Shortest-path tree</span>
+                        : <span className="av-graph-meta__item" role="listitem"><i className="av-graph-meta__dot" style={{ backgroundColor: '#d5ef79' }} />Chosen edge</span>}
+                </div>
+                <span className="av-graph-meta__count">
+                    {Object.keys(graph).length} nodes / {edgeCount} {directed ? 'arcs' : 'edges'}
+                </span>
+            </div>
             <canvas
                 ref={canvasRef}
-                className="w-full h-full"
-                style={{ maxHeight: '450px' }}
+                className="block w-full"
+                role="img"
+                aria-label={'Graph visualization with ' + Object.keys(graph).length + ' nodes and ' + edgeCount + ' ' + (directed ? 'directed edges' : 'edges') + '. Active algorithm states are highlighted.'}
             />
-
-            {/* Legend */}
-            <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur rounded-lg p-2 text-xs flex gap-3">
-                <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-blue-500"></span> Start
-                </span>
-                <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-purple-500"></span> Current
-                </span>
-                <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-green-500"></span> Visited
-                </span>
-                <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-amber-500"></span> Checking
-                </span>
-            </div>
-
-            {/* Edge count */}
-            <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur rounded-lg px-2 py-1 text-xs text-slate-400">
-                {Object.keys(graph).length} nodes
-            </div>
         </div>
     );
 };

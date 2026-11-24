@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import { Play, Sparkles, BarChart3, Coins, Package, Pause, RotateCcw, Trophy } from 'lucide-react';
 import { api } from '../utils/api';
 import { AlgorithmType } from '../types';
@@ -14,26 +15,46 @@ import GreedyChainCanvas from '../components/GreedyChainCanvas';
 import AlgorithmRacing from '../components/AlgorithmRacing';
 import InputPresets from '../components/InputPresets';
 
+type PlaygroundAlgorithm = 'knapsack' | 'coin-change';
+
 // Helper component for single run visualization
-const SingleRunVisualizer = ({ result, type }: { result: AlgorithmResult, type: 'greedy' | 'dp' }) => {
+const SingleRunVisualizer = ({
+    result,
+    type,
+    algorithm,
+    amount = 0
+}: {
+    result: AlgorithmResult;
+    type: 'greedy' | 'dp';
+    algorithm: PlaygroundAlgorithm;
+    amount?: number;
+}) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const state = useAlgorithmState(result.steps, currentStep);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
-        if (isPlaying && currentStep < result.steps.length - 1) {
-            timerRef.current = setTimeout(() => setCurrentStep(p => p + 1), 500);
-        } else if (currentStep >= result.steps.length - 1) {
-            setIsPlaying(false);
-        }
+        if (!isPlaying || result.steps.length === 0 || currentStep >= result.steps.length - 1) return;
+
+        const nextIndex = currentStep + 1;
+        timerRef.current = setTimeout(() => {
+            setCurrentStep(nextIndex);
+            if (nextIndex >= result.steps.length - 1) setIsPlaying(false);
+        }, 500);
+
         return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     }, [isPlaying, currentStep, result.steps.length]);
 
     return (
         <div className="relative h-full w-full">
             {type === 'greedy' ? (
-                <GreedyChainCanvas decisions={state.greedyDecisions} currentIndex={state.greedyDecisions.length - 1} />
+                <GreedyChainCanvas
+                    mode={algorithm === 'coin-change' ? 'coins' : 'knapsack'}
+                    amount={amount}
+                    decisions={state.greedyDecisions}
+                    currentIndex={state.greedyDecisions.length - 1}
+                />
             ) : (
                 <DPTableCanvas data={state.dpTable} highlightedCell={state.highlightedCell} />
             )}
@@ -59,10 +80,11 @@ const SingleRunVisualizer = ({ result, type }: { result: AlgorithmResult, type: 
     );
 };
 
-type PlaygroundAlgorithm = 'knapsack' | 'coin-change';
-
 const Playground = () => {
-    const [selectedAlgorithm, setSelectedAlgorithm] = useState<PlaygroundAlgorithm>('knapsack');
+    const [searchParams] = useSearchParams();
+    const [selectedAlgorithm, setSelectedAlgorithm] = useState<PlaygroundAlgorithm>(() =>
+        searchParams.get('algorithm') === 'coin-change' ? 'coin-change' : 'knapsack'
+    );
 
     // Knapsack State
     const [items, setItems] = useState<KnapsackItem[]>([]);
@@ -122,22 +144,16 @@ const Playground = () => {
         setLoading(true);
         try {
             const type = getAlgorithmType(method);
-            let result;
-
-            if (selectedAlgorithm === 'knapsack') {
-                const input = {
+            const result = selectedAlgorithm === 'knapsack'
+                ? await api.solveKnapsack(type, {
                     capacity,
                     items: items.map(item => ({
                         id: item.id,
                         weight: item.weight,
                         value: item.value
                     }))
-                };
-                result = await api.solveKnapsack(type, input);
-            } else {
-                const input = { amount, coins };
-                result = await api.solveCoinChange(type, input);
-            }
+                })
+                : await api.solveCoinChange(type, { amount, coins });
 
             if (method === 'greedy') setGreedyResult(result);
             else setDpResult(result);
@@ -374,7 +390,7 @@ const Playground = () => {
 
                                                 {/* Single Run Visualization */}
                                                 <div className="h-[300px] relative overflow-hidden rounded-lg bg-slate-950/50">
-                                                    <SingleRunVisualizer result={greedyResult} type="greedy" />
+                                                    <SingleRunVisualizer result={greedyResult} type="greedy" algorithm={selectedAlgorithm} amount={amount} />
                                                 </div>
                                             </div>
                                         )}
@@ -395,7 +411,7 @@ const Playground = () => {
 
                                                 {/* Single Run Visualization */}
                                                 <div className="h-[300px] relative overflow-hidden rounded-lg bg-slate-950/50">
-                                                    <SingleRunVisualizer result={dpResult} type="dp" />
+                                                    <SingleRunVisualizer result={dpResult} type="dp" algorithm={selectedAlgorithm} amount={amount} />
                                                 </div>
                                             </div>
                                         )}
@@ -438,7 +454,7 @@ const Playground = () => {
                                         />
 
                                         {/* Metrics Comparison */}
-                                        <PerformanceComparison results={comparisonResults} />
+                                        <PerformanceComparison results={comparisonResults} objective={selectedAlgorithm === 'coin-change' ? 'minimize' : 'maximize'} />
                                     </motion.div>
                                 ) : (
                                     <motion.div

@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Code, Copy, Download, Check } from 'lucide-react';
+import type { KnapsackInput, CoinChangeInput, IntervalSchedulingInput } from '../types';
 
 interface CodeExporterProps {
     algorithmType: 'knapsack' | 'coin-change' | 'interval-scheduling';
     variant: 'dp' | 'greedy';
-    inputData: any;
+    inputData: KnapsackInput | CoinChangeInput | IntervalSchedulingInput;
 }
 
-const CODE_TEMPLATES = {
+type CodeLanguage = 'python' | 'javascript';
+type CodeTemplate = Partial<Record<CodeExporterProps['variant'], Partial<Record<CodeLanguage, string>>>>;
+
+const CODE_TEMPLATES: Partial<Record<CodeExporterProps['algorithmType'], CodeTemplate>> = {
     knapsack: {
         dp: {
             python: `def knapsack_dp(items, capacity):
@@ -72,25 +76,40 @@ console.log(\`Maximum value: \${result}\`);`
     Greedy solution for Fractional Knapsack
     Time: O(n log n), Space: O(n)
     """
-    # Calculate value-to-weight ratio
+    # Calculate value-to-weight ratio safely; positive zero-weight items come first.
     items_with_ratio = [
-        {**item, 'ratio': item['value'] / item['weight']}
+        {
+            **item,
+            'ratio': (
+                float('inf') if item['weight'] == 0 and item['value'] > 0
+                else (item['value'] / item['weight'] if item['weight'] > 0 else float('-inf'))
+            )
+        }
         for item in items
     ]
-    
+
     # Sort by ratio (descending)
     items_with_ratio.sort(key=lambda x: x['ratio'], reverse=True)
-    
+
     total_value = 0
     remaining_capacity = capacity
-    
+
     for item in items_with_ratio:
-        if remaining_capacity >= item['weight']:
+        if item['value'] <= 0:
+            continue
+
+        # A positive-value zero-weight item can always be taken completely.
+        if item['weight'] == 0:
             total_value += item['value']
-            remaining_capacity -= item['weight']
-        else:
-            # Take fraction
-            total_value += item['value'] * (remaining_capacity / item['weight'])
+            continue
+
+        fraction = min(1.0, remaining_capacity / item['weight'])
+        if fraction <= 0:
+            break
+
+        total_value += item['value'] * fraction
+        remaining_capacity = max(0.0, remaining_capacity - item['weight'] * fraction)
+        if fraction < 1.0:
             break
     
     return total_value
@@ -105,27 +124,35 @@ print(f"Greedy value: {result:.2f}")`,
     // Greedy solution for Fractional Knapsack
     // Time: O(n log n), Space: O(n)
     
-    // Calculate value-to-weight ratio
+    // Calculate value-to-weight ratio without dividing by zero.
     const itemsWithRatio = items.map(item => ({
         ...item,
-        ratio: item.value / item.weight
+        ratio: item.weight === 0
+            ? (item.value > 0 ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY)
+            : item.value / item.weight
     }));
-    
+
     // Sort by ratio (descending)
     itemsWithRatio.sort((a, b) => b.ratio - a.ratio);
-    
+
     let totalValue = 0;
     let remainingCapacity = capacity;
-    
+
     for (const item of itemsWithRatio) {
-        if (remainingCapacity >= item.weight) {
+        if (item.value <= 0) continue;
+
+        // A positive-value zero-weight item can always be taken completely.
+        if (item.weight === 0) {
             totalValue += item.value;
-            remainingCapacity -= item.weight;
-        } else {
-            // Take fraction
-            totalValue += item.value * (remainingCapacity / item.weight);
-            break;
+            continue;
         }
+
+        const fraction = Math.min(1, remainingCapacity / item.weight);
+        if (fraction <= 0) break;
+
+        totalValue += item.value * fraction;
+        remainingCapacity = Math.max(0, remainingCapacity - item.weight * fraction);
+        if (fraction < 1) break;
     }
     
     return totalValue;
@@ -147,16 +174,16 @@ const CodeExporter: React.FC<CodeExporterProps> = ({ algorithmType, variant, inp
     const [copied, setCopied] = useState(false);
 
     const getTemplate = (): string => {
-        const templates = CODE_TEMPLATES as any;
-        const template = templates[algorithmType]?.[variant]?.[language];
+        const template = CODE_TEMPLATES[algorithmType]?.[variant]?.[language];
         if (!template) return '// Template not available';
 
         // Replace placeholders with actual data
         let code = template;
 
         if (algorithmType === 'knapsack' && inputData) {
-            code = code.replace('{{ITEMS}}', JSON.stringify(inputData.items, null, 2));
-            code = code.replace('{{CAPACITY}}', inputData.capacity.toString());
+            const knapsackInput = inputData as KnapsackInput;
+            code = code.replace('{{ITEMS}}', JSON.stringify(knapsackInput.items, null, 2));
+            code = code.replace('{{CAPACITY}}', knapsackInput.capacity.toString());
         }
 
         return code;

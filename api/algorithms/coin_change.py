@@ -1,163 +1,88 @@
-import time
+from time import perf_counter
 from typing import List
-from api.models import AlgorithmResult, Step, StepType, Metrics
-from pydantic import BaseModel
+
+from api.models import AlgorithmResult, CoinChangeInput, Metrics, Step, StepType
 
 
-class CoinChangeInput(BaseModel):
-    amount: int
-    coins: List[int]
+def _validate(data: CoinChangeInput) -> None:
+    if data.amount < 0:
+        raise ValueError("Amount cannot be negative")
+    if not data.coins or any(coin <= 0 for coin in data.coins):
+        raise ValueError("Coin denominations must be positive integers")
 
 
 def solve_coin_change_dp(data: CoinChangeInput) -> AlgorithmResult:
-    """
-    DP Solution: Minimum number of coins to make amount
-    dp[i] = minimum coins needed to make amount i
-    """
-    start_time = time.time()
-    steps = []
+    """Minimum-coin change using unbounded dynamic programming."""
+    _validate(data)
+    started = perf_counter()
     amount = data.amount
-    coins = data.coins
-    
-    # Initialize DP array
-    dp = [float('inf')] * (amount + 1)
+    coins = sorted(set(data.coins))
+    unreachable = amount + 1
+    dp = [unreachable] * (amount + 1)
+    previous_coin = [0] * (amount + 1)
     dp[0] = 0
-    
-    steps.append(Step(
-        type=StepType.INIT,
-        description=f"Initialized DP array of size {amount + 1}. dp[0] = 0, rest = ∞",
-        data={"rows": 1, "cols": amount + 1}
-    ))
-    
-    # Fill DP table
-    for i in range(1, amount + 1):
-        steps.append(Step(
-            type=StepType.HIGHLIGHT,
-            description=f"Computing minimum coins for amount {i}",
-            data={"i": 0, "j": i}
-        ))
-        
+    steps: List[Step] = [Step(type=StepType.INIT, description=f"Initialized minimum-coin DP for amounts 0..{amount}", data={"rows": 1, "cols": amount + 1})]
+    operations = 0
+
+    for current in range(1, amount + 1):
+        steps.append(Step(type=StepType.HIGHLIGHT, description=f"Compute the minimum coins for amount {current}", data={"i": 0, "j": current}))
         for coin in coins:
-            if coin <= i and dp[i - coin] != float('inf'):
-                new_val = dp[i - coin] + 1
-                if new_val < dp[i]:
-                    dp[i] = new_val
-                    steps.append(Step(
-                        type=StepType.UPDATE,
-                        description=f"Using coin {coin}: dp[{i}] = dp[{i - coin}] + 1 = {new_val}",
-                        data={
-                            "i": 0,
-                            "j": i,
-                            "value": new_val,
-                            "coin_used": coin,
-                            "prev_j": i - coin
-                        }
-                    ))
-    
-    result_value = dp[amount] if dp[amount] != float('inf') else -1
-    
-    # Backtrack to find coins used
-    selected_coins = []
-    if result_value != -1:
-        current = amount
+            if coin > current:
+                break
+            operations += 1
+            candidate = dp[current - coin] + 1
+            if candidate < dp[current]:
+                dp[current] = candidate
+                previous_coin[current] = coin
+                steps.append(Step(type=StepType.UPDATE, description=f"Use coin {coin}: dp[{current}] becomes {candidate}", data={"i": 0, "j": current, "value": candidate, "coin_used": coin, "prev_j": current - coin}))
+
+    possible = dp[amount] != unreachable
+    selected: List[int] = []
+    current = amount
+    if possible:
         while current > 0:
-            for coin in coins:
-                if current >= coin and dp[current - coin] == dp[current] - 1:
-                    selected_coins.append(coin)
-                    current -= coin
-                    steps.append(Step(
-                        type=StepType.SOLUTION,
-                        description=f"Backtracking: Used coin {coin}",
-                        data={"coin": coin, "remaining": current}
-                    ))
-                    break
-    
-    end_time = time.time()
-    
+            coin = previous_coin[current]
+            if coin <= 0:
+                raise RuntimeError("Could not reconstruct a valid minimum-coin solution")
+            selected.append(coin)
+            current -= coin
+            steps.append(Step(type=StepType.SOLUTION, description=f"Take coin {coin}; {current} remains", data={"coin": coin, "remaining": current}))
+    selected.reverse()
+
+    result_value = dp[amount] if possible else -1
+    elapsed = perf_counter() - started
     return AlgorithmResult(
-        steps=steps,
-        result_value=result_value,
-        selected_items=selected_coins,
-        metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity=f"O({amount})",
-            time_complexity=f"O({amount} * {len(coins)})",
-            step_count=len(steps)
-        )
+        steps=steps, result_value=result_value, selected_items=selected,
+        result_data={"possible": possible, "coins": selected, "amount": amount, "coin_count": result_value},
+        metrics=Metrics(time_taken=elapsed, time_complexity=f"O(amount × {len(coins)})", space_complexity=f"O(amount)", step_count=len(steps), operation_count=operations)
     )
 
 
 def solve_coin_change_greedy(data: CoinChangeInput) -> AlgorithmResult:
-    """
-    Greedy Solution: Largest coin first (may not give optimal solution)
-    """
-    start_time = time.time()
-    steps = []
-    amount = data.amount
-    coins = sorted(data.coins, reverse=True)
-    
-    steps.append(Step(
-        type=StepType.SORT,
-        description=f"Sorted coins in descending order: {coins}",
-        data={"sorted_coins": coins}
-    ))
-    
-    remaining = amount
-    selected_coins = []
-    total_coins = 0
-    
-    for coin in coins:
-        count = remaining // coin
-        if count > 0:
-            remaining -= coin * count
-            selected_coins.extend([coin] * count)
-            total_coins += count
-            
-            steps.append(Step(
-                type=StepType.PICK,
-                description=f"Picked {count} coin(s) of value {coin}. Remaining: {remaining}",
-                data={
-                    "item_id": coin,
-                    "weight": coin,
-                    "value": coin,
-                    "ratio": 1.0,
-                    "count": count,
-                    "current_weight": amount - remaining,
-                    "total_value": total_coins
-                }
-            ))
+    """Largest-denomination-first heuristic; may fail or be non-optimal."""
+    _validate(data)
+    started = perf_counter()
+    remaining = data.amount
+    selected: List[int] = []
+    steps: List[Step] = [Step(type=StepType.SORT, description="Sort coin denominations from largest to smallest", data={"sorted_coins": sorted(data.coins, reverse=True)})]
+    operations = 0
+
+    for coin in sorted(set(data.coins), reverse=True):
+        operations += 1
+        count, remainder = divmod(remaining, coin)
+        if count:
+            selected.extend([coin] * count)
+            remaining = remainder
+            steps.append(Step(type=StepType.PICK, description=f"Take {count} coin(s) of value {coin}; {remaining} remains", data={"item_id": coin, "coin": coin, "count": count, "current_weight": data.amount - remaining, "total_value": len(selected)}))
         else:
-            steps.append(Step(
-                type=StepType.REJECT,
-                description=f"Coin {coin} too large for remaining amount {remaining}",
-                data={
-                    "item_id": coin,
-                    "weight": coin,
-                    "value": coin,
-                    "ratio": 1.0,
-                    "current_weight": amount - remaining
-                }
-            ))
-    
-    result_value = total_coins if remaining == 0 else -1
-    
-    if remaining > 0:
-        steps.append(Step(
-            type=StepType.SOLUTION,
-            description=f"Greedy failed: Cannot make exact amount (remaining: {remaining})",
-            data={"success": False, "remaining": remaining}
-        ))
-    
-    end_time = time.time()
-    
+            steps.append(Step(type=StepType.REJECT, description=f"Coin {coin} is larger than the remaining amount", data={"item_id": coin, "coin": coin, "current_weight": data.amount - remaining}))
+
+    possible = remaining == 0
+    if not possible:
+        steps.append(Step(type=StepType.SOLUTION, description=f"Greedy could not make the exact amount; {remaining} remains", data={"success": False, "remaining": remaining}))
+    elapsed = perf_counter() - started
     return AlgorithmResult(
-        steps=steps,
-        result_value=result_value,
-        selected_items=selected_coins if remaining == 0 else [],
-        metrics=Metrics(
-            time_taken=end_time - start_time,
-            space_complexity="O(1)",
-            time_complexity=f"O({len(coins)} log {len(coins)})",
-            step_count=len(steps)
-        )
+        steps=steps, result_value=len(selected) if possible else -1, selected_items=selected if possible else [],
+        result_data={"possible": possible, "coins": selected if possible else [], "remaining": remaining, "amount": data.amount, "optimal": False},
+        metrics=Metrics(time_taken=elapsed, time_complexity=f"O(k log k)", space_complexity="O(amount)", step_count=len(steps), operation_count=operations)
     )

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { StepType } from '../types';
 import type { Step } from '../types';
@@ -10,152 +10,90 @@ interface TimelineScrubberProps {
     steps?: Step[];
 }
 
+const markerColor = (type: StepType): string => {
+    switch (type) {
+        case StepType.INIT: return '#78b8ff';
+        case StepType.PICK: return '#d5ef79';
+        case StepType.REJECT: return '#ed765f';
+        case StepType.SOLUTION: return '#b7a2ff';
+        default: return '#a9b8c9';
+    }
+};
+
 const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
     totalSteps,
     currentStep,
     onSeek,
     steps = []
 }) => {
-    const [isDragging, setIsDragging] = useState(false);
-    const trackRef = useRef<HTMLDivElement>(null);
+    const safeTotal = Math.max(0, Math.floor(totalSteps));
+    const lastIndex = Math.max(0, safeTotal - 1);
+    const activeIndex = Math.max(0, Math.min(currentStep, lastIndex));
+    const hasActiveStep = safeTotal > 0 && currentStep >= 0;
+    const progress = hasActiveStep ? ((activeIndex + 1) / safeTotal) * 100 : 0;
 
-    const progress = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0;
-
-    const handleMouseDown = () => {
-        setIsDragging(true);
-    };
-
-    const handleMouseUp = () => {
-        setIsDragging(false);
-    };
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (isDragging && trackRef.current) {
-            const rect = trackRef.current.getBoundingClientRect();
-            const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-            const percentage = x / rect.width;
-            const newStep = Math.floor(percentage * totalSteps);
-            onSeek(newStep);
-        }
-    };
-
-    const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (trackRef.current) {
-            const rect = trackRef.current.getBoundingClientRect();
-            const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-            const percentage = x / rect.width;
-            const newStep = Math.floor(percentage * totalSteps);
-            onSeek(newStep);
-        }
-    };
-
-    // Get important step markers
-    const getStepMarkers = () => {
-        return steps
-            .map((step, index) => ({
-                index,
-                type: step.type,
-                position: (index / totalSteps) * 100
-            }))
-            .filter(marker =>
-                marker.type === StepType.INIT ||
-                marker.type === StepType.PICK ||
-                marker.type === StepType.REJECT ||
-                marker.type === StepType.SOLUTION
-            );
-    };
-
-    const markers = getStepMarkers();
-
-    const getMarkerColor = (type: StepType) => {
-        switch (type) {
-            case StepType.INIT:
-                return 'bg-blue-400';
-            case StepType.PICK:
-                return 'bg-emerald-400';
-            case StepType.REJECT:
-                return 'bg-red-400';
-            case StepType.SOLUTION:
-                return 'bg-purple-400';
-            default:
-                return 'bg-slate-400';
-        }
-    };
-
-    React.useEffect(() => {
-        if (isDragging) {
-            document.addEventListener('mouseup', handleMouseUp as any);
-            return () => {
-                document.removeEventListener('mouseup', handleMouseUp as any);
-            };
-        }
-    }, [isDragging]);
+    const markers = steps
+        .map((step, index) => ({
+            index,
+            type: step.type,
+            position: safeTotal > 1 ? (index / (safeTotal - 1)) * 100 : 0
+        }))
+        .filter(marker =>
+            marker.type === StepType.INIT ||
+            marker.type === StepType.PICK ||
+            marker.type === StepType.REJECT ||
+            marker.type === StepType.SOLUTION
+        );
 
     return (
-        <div className="w-full space-y-2">
-            {/* Step counter */}
-            <div className="flex justify-between items-center text-xs text-slate-400">
-                <span>Step {currentStep + 1} of {totalSteps}</span>
-                <span>{progress.toFixed(0)}%</span>
+        <div className="av-timeline-scrubber">
+            <div className="av-timeline-scrubber__meta" aria-live="polite">
+                <span>{safeTotal === 0 ? 'No trace loaded' : hasActiveStep ? `Step ${activeIndex + 1} / ${safeTotal}` : `Ready · ${safeTotal} steps`}</span>
+                <strong>{Math.round(progress)}%</strong>
             </div>
 
-            {/* Timeline track */}
-            <div
-                ref={trackRef}
-                className="relative h-3 bg-slate-800 rounded-full cursor-pointer group"
-                onClick={handleClick}
-                onMouseMove={handleMouseMove}
-                onMouseDown={handleMouseDown}
-            >
-                {/* Progress fill */}
-                <motion.div
-                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-full"
-                    style={{ width: `${progress}%` }}
-                    initial={false}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: isDragging ? 0 : 0.2 }}
+            <div className="av-timeline-scrubber__control">
+                <input
+                    className="av-timeline-scrubber__input"
+                    type="range"
+                    min={0}
+                    max={lastIndex}
+                    step={1}
+                    value={activeIndex}
+                    disabled={safeTotal === 0}
+                    onChange={event => onSeek(Number(event.currentTarget.value))}
+                    aria-label="Seek through algorithm execution"
+                    aria-valuetext={safeTotal === 0
+                        ? 'No steps available'
+                        : hasActiveStep
+                            ? `Step ${activeIndex + 1} of ${safeTotal}`
+                            : `Before step 1 of ${safeTotal}`}
                 />
-
-                {/* Step markers */}
-                {markers.map((marker, idx) => (
-                    <div
-                        key={idx}
-                        className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${getMarkerColor(marker.type)} opacity-70 group-hover:opacity-100 transition-opacity`}
-                        style={{ left: `${marker.position}%` }}
-                        title={`${marker.type} (Step ${marker.index + 1})`}
+                <div className="av-timeline-scrubber__track" aria-hidden="true">
+                    <motion.div
+                        className="av-timeline-scrubber__fill"
+                        initial={false}
+                        animate={{ width: progress + '%' }}
+                        transition={{ duration: 0.16, ease: 'easeOut' }}
                     />
-                ))}
-
-                {/* Scrubber handle */}
-                <motion.div
-                    className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow-lg border-2 border-indigo-500 cursor-grab ${isDragging ? 'cursor-grabbing scale-110' : 'scale-100'
-                        } transition-transform`}
-                    style={{ left: `${progress}%`, marginLeft: '-10px' }}
-                    whileHover={{ scale: 1.2 }}
-                    whileTap={{ scale: 1.1 }}
-                >
-                    <div className="absolute inset-0 rounded-full bg-indigo-500 opacity-20 animate-ping" />
-                </motion.div>
+                    <div className="av-timeline-scrubber__markers">
+                        {markers.map(marker => (
+                            <span
+                                key={marker.index}
+                                className="av-timeline-scrubber__marker"
+                                style={{ left: marker.position + '%', backgroundColor: markerColor(marker.type) }}
+                                title={`${marker.type} · step ${marker.index + 1}`}
+                            />
+                        ))}
+                    </div>
+                </div>
             </div>
 
-            {/* Legend */}
-            <div className="flex items-center gap-4 text-xs text-slate-500">
-                <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-blue-400" />
-                    <span>Init</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span>Pick</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-red-400" />
-                    <span>Reject</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-purple-400" />
-                    <span>Solution</span>
-                </div>
+            <div className="av-timeline-scrubber__legend" aria-label="Timeline event legend">
+                <span><i style={{ backgroundColor: '#78b8ff' }} />Init</span>
+                <span><i style={{ backgroundColor: '#d5ef79' }} />Pick</span>
+                <span><i style={{ backgroundColor: '#ed765f' }} />Reject</span>
+                <span><i style={{ backgroundColor: '#b7a2ff' }} />Solution</span>
             </div>
         </div>
     );

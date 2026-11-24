@@ -32,11 +32,20 @@ const ChallengeMode = () => {
         return difficultyMatch && algorithmMatch;
     });
 
-    const getDifficultyColor = (difficulty: Difficulty) => {
+    const getDifficultyStyles = (difficulty: Difficulty) => {
         switch (difficulty) {
-            case 'easy': return 'emerald';
-            case 'medium': return 'yellow';
-            case 'hard': return 'red';
+            case 'easy': return {
+                card: 'hover:border-[#d6f56a]/70',
+                badge: 'border border-[#d6f56a]/30 bg-[#d6f56a]/10 text-[#d6f56a]'
+            };
+            case 'medium': return {
+                card: 'hover:border-[#ffbd63]/70',
+                badge: 'border border-[#ffbd63]/30 bg-[#ffbd63]/10 text-[#ffbd63]'
+            };
+            case 'hard': return {
+                card: 'hover:border-[#ff8063]/70',
+                badge: 'border border-[#ff8063]/30 bg-[#ff8063]/10 text-[#ff8063]'
+            };
         }
     };
 
@@ -76,7 +85,7 @@ const ChallengeMode = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col gap-6 mb-6 xl:flex-row xl:items-center xl:justify-between">
                     <div>
                         <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
                             Challenge Mode
@@ -85,7 +94,7 @@ const ChallengeMode = () => {
                             Test your algorithm skills with progressive challenges
                         </p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-4">
                         <button
                             onClick={handleRandomChallenge}
                             className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-lg transition-all shadow-lg shadow-purple-500/30 flex items-center gap-2"
@@ -110,14 +119,14 @@ const ChallengeMode = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="flex items-center gap-6 bg-slate-900 border border-slate-800 rounded-xl p-4">
+                <div className="flex flex-col gap-4 bg-slate-900 border border-slate-800 rounded-xl p-4 xl:flex-row xl:items-center">
                     <div className="flex items-center gap-2 text-slate-400">
                         <Filter size={18} />
                         <span className="font-semibold">Filters:</span>
                     </div>
 
                     {/* Difficulty Filter */}
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         <button
                             onClick={() => setDifficultyFilter('all')}
                             className={`px-4 py-2 rounded-lg font-semibold transition-all ${difficultyFilter === 'all'
@@ -157,7 +166,7 @@ const ChallengeMode = () => {
                     </div>
 
                     {/* Algorithm Filter */}
-                    <div className="flex gap-2 ml-auto">
+                    <div className="flex flex-wrap gap-2 xl:ml-auto">
                         <button
                             onClick={() => setAlgorithmFilter('all')}
                             className={`px-4 py-2 rounded-lg font-semibold transition-all ${algorithmFilter === 'all'
@@ -213,7 +222,7 @@ const ChallengeMode = () => {
             <AnimatePresence mode="wait">
                 <motion.div
                     key={`${difficultyFilter}-${algorithmFilter}`}
-                    className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -222,7 +231,7 @@ const ChallengeMode = () => {
                         const isLocked = isChallengeLocked(challenge);
                         const isCompleted = isChallengeCompleted(challenge.id);
                         const progress = getChallengeProgress(challenge.id);
-                        const difficultyColor = getDifficultyColor(challenge.difficulty);
+                        const difficultyStyles = getDifficultyStyles(challenge.difficulty);
 
                         return (
                             <motion.div
@@ -231,16 +240,24 @@ const ChallengeMode = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.05 }}
                                 onClick={() => handleChallengeClick(challenge.id)}
+                                role="button"
+                                tabIndex={isLocked ? -1 : 0}
+                                aria-disabled={isLocked}
+                                onKeyDown={(event) => {
+                                    if (isLocked || (event.key !== "Enter" && event.key !== " ")) return;
+                                    event.preventDefault();
+                                    handleChallengeClick(challenge.id);
+                                }}
                                 className={`bg-slate-900 border-2 rounded-xl p-6 transition-all ${isLocked
                                     ? 'border-slate-800 opacity-50 cursor-not-allowed'
-                                    : `border-slate-700 hover:border-${difficultyColor}-500 cursor-pointer hover:shadow-lg hover:shadow-${difficultyColor}-500/20`
+                                    : `border-slate-700 ${difficultyStyles.card} cursor-pointer hover:bg-slate-800/60`
                                     }`}
                             >
                                 {/* Header */}
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="flex items-center gap-2">
                                         {getAlgorithmIcon(challenge.algorithmType)}
-                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase bg-${difficultyColor}-500/20 text-${difficultyColor}-400`}>
+                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${difficultyStyles.badge}`}>
                                             {challenge.difficulty}
                                         </span>
                                     </div>
