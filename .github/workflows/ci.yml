@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: algoverses-ci-${{ github.event.pull_request.number || github.ref }}
+  group: algoverses-ci-${{ github.event.pull_request.number || github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -63,6 +63,7 @@ jobs:
   security-node:
     name: Node dependency audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
