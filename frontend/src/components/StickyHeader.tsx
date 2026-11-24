@@ -22,9 +22,7 @@ const StickyHeader: React.FC = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    useEffect(() => {
-        setMenuOpen(false);
-    }, [location.pathname]);
+    const closeMenu = () => setMenuOpen(false);
 
     useEffect(() => {
         if (!menuOpen) return;
@@ -59,6 +57,7 @@ const StickyHeader: React.FC = () => {
                             <Link
                                 key={item.to}
                                 to={item.to}
+                                onClick={closeMenu}
                                 className="av-nav__link"
                                 aria-current={active ? 'page' : undefined}
                             >
@@ -69,7 +68,7 @@ const StickyHeader: React.FC = () => {
                     })}
                 </nav>
 
-                <Link className="av-header__action" to="/visualizer/knapsack">
+                <Link className="av-header__action" to="/visualizer/knapsack" onClick={closeMenu}>
                     Open the lab <ArrowUpRight size={14} />
                 </Link>
 
@@ -87,17 +86,18 @@ const StickyHeader: React.FC = () => {
 
             {menuOpen && (
                 <nav id="av-mobile-navigation" className="av-mobile-nav" aria-label="Mobile navigation">
-                    <Link to="/" aria-current={location.pathname === '/' ? 'page' : undefined}>Home</Link>
+                    <Link to="/" onClick={closeMenu} aria-current={location.pathname === '/' ? 'page' : undefined}>Home</Link>
                     {navItems.map(item => (
                         <Link
                             key={item.to}
                             to={item.to}
+                            onClick={closeMenu}
                             aria-current={isCurrent(item.to) ? 'page' : undefined}
                         >
                             {item.label}
                         </Link>
                     ))}
-                    <Link to="/visualizer/knapsack" aria-current={location.pathname.startsWith('/visualizer/') ? 'page' : undefined}>
+                    <Link to="/visualizer/knapsack" onClick={closeMenu} aria-current={location.pathname.startsWith('/visualizer/') ? 'page' : undefined}>
                         Open the visualizer
                     </Link>
                 </nav>
