@@ -7,14 +7,17 @@ from app.models import AlgorithmResult, DijkstraInput, Metrics, Step, StepType
 
 def solve_dijkstra(data: DijkstraInput) -> AlgorithmResult:
     """Single-source shortest paths for directed or undirected graphs with non-negative weights."""
-    graph = data.graph
+    # Include vertices that appear only as neighbors in the adjacency list.
+    all_nodes = set(data.graph)
+    for neighbors in data.graph.values():
+        all_nodes.update(neighbors)
+    graph = {node: dict(data.graph.get(node, {})) for node in sorted(all_nodes)}
+
     start = data.start_node
     if start not in graph:
         raise ValueError(f"Start node '{start}' does not exist in the graph")
     for source, neighbors in graph.items():
         for target, weight in neighbors.items():
-            if target not in graph:
-                raise ValueError(f"Edge {source}->{target} references an unknown node")
             if weight < 0:
                 raise ValueError("Dijkstra cannot process negative edge weights")
 

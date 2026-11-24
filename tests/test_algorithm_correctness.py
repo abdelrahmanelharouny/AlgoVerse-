@@ -132,3 +132,61 @@ def test_interval_scheduling_dp_reconstructs_selected_intervals_with_linear_stat
     assert result.result_value == 3
     assert result.selected_items == ["a", "b", "d"]
     assert result.result_data["selected_intervals"] == ["a", "b", "d"]
+
+
+
+def test_coin_change_zero_and_unreachable_amounts():
+    zero = solve_coin_change_dp(CoinChangeInput(amount=0, coins=[1, 2]))
+    unreachable = solve_coin_change_dp(CoinChangeInput(amount=3, coins=[2, 4]))
+    assert zero.result_value == 0
+    assert zero.selected_items == []
+    assert unreachable.result_value == -1
+    assert unreachable.selected_items == []
+
+
+@pytest.mark.parametrize("weight", [float("nan"), float("inf"), float("-inf")])
+def test_dijkstra_rejects_non_finite_edge_weights(weight):
+    with pytest.raises(ValueError, match="finite"):
+        DijkstraInput(graph={"A": {"B": weight}}, start_node="A")
+
+
+def test_dijkstra_includes_neighbor_only_and_unreachable_nodes():
+    data = DijkstraInput(
+        start_node="A",
+        graph={"A": {"B": 4, "C": 1}, "C": {"B": 2}, "Z": {}},
+    )
+    result = solve_dijkstra(data)
+    assert result.result_data["distances"] == {"A": 0, "B": 3, "C": 1, "Z": None}
+    assert result.result_data["paths"]["B"] == ["A", "C", "B"]
+    assert result.result_data["paths"]["Z"] == []
+    assert result.result_data["unreachable_nodes"] == ["Z"]
+
+
+@pytest.mark.parametrize("solver", [solve_prims, solve_kruskals])
+def test_mst_algorithms_include_neighbor_only_nodes(solver):
+    data = DijkstraInput(
+        start_node="A",
+        graph={"A": {"B": 1}, "B": {"A": 1, "C": 2}, "D": {}},
+    )
+    result = solver(data)
+    assert result.result_value == 3
+    assert len(result.result_data["mst_edges"]) == 2
+    assert result.result_data["components_count"] == 2
+    assert result.result_data["is_spanning_tree"] is False
+
+
+def test_rod_cutting_zero_length_and_missing_prices():
+    zero = solve_rod_cutting_dp(RodCuttingInput(length=0, prices=[]))
+    assert zero.result_value == 0
+    assert zero.result_data["cuts"] == []
+    with pytest.raises(ValueError, match="price"):
+        RodCuttingInput(length=3, prices=[])
+
+
+def test_lcs_result_contains_reconstructed_subsequence():
+    from api.algorithms.lcs import solve_lcs_dp
+    from api.models import LCSInput
+
+    result = solve_lcs_dp(LCSInput(text1="AGGTAB", text2="GXTXAYB"))
+    assert result.result_value == 4
+    assert result.result_data["lcs"] == "GTAB"

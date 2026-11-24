@@ -20,7 +20,7 @@ def solve_prims(data: DijkstraInput) -> AlgorithmResult:
     mst_edges: List[Dict[str, object]] = []
     total_weight = 0.0
     components = [start] + [node for node in nodes if node != start]
-    steps: List[Step] = [Step(type=StepType.INIT, description=f"Initialize Prim from node {start}; remaining components will be processed if needed", data={"visited": [], "mst_edges": [], "graph": data.graph, "start_node": start})]
+    steps: List[Step] = [Step(type=StepType.INIT, description=f"Initialize Prim from node {start}; remaining components will be processed if needed", data={"visited": [], "mst_edges": [], "graph": adjacency, "start_node": start})]
     operations = 0
 
     for component_start in components:

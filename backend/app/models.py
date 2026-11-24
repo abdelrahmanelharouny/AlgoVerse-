@@ -1,3 +1,4 @@
+import math
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
@@ -118,18 +119,24 @@ class DijkstraInput(BaseModel):
     graph: Dict[str, Dict[str, float]]
     start_node: str = ""
 
-    @field_validator("graph")
+    @field_validator("graph", mode="before")
     @classmethod
-    def valid_graph_references(cls, graph: Dict[str, Dict[str, float]]) -> Dict[str, Dict[str, float]]:
-        if len(graph) > 100:
-            raise ValueError("Graph cannot contain more than 100 nodes")
-        nodes = set(graph)
+    def valid_graph_references(cls, graph: Any) -> Any:
+        if not isinstance(graph, dict):
+            return graph
+        nodes = set()
         for source, neighbors in graph.items():
+            if not isinstance(source, str) or not isinstance(neighbors, dict):
+                raise ValueError("Graph nodes must be strings with adjacency dictionaries")
+            nodes.add(source)
             for target, weight in neighbors.items():
-                if target not in nodes:
-                    raise ValueError(f"Neighbor '{target}' referenced by '{source}' is not a graph node")
-                if not isinstance(weight, (int, float)) or not __import__("math").isfinite(weight):
+                if not isinstance(target, str):
+                    raise ValueError("Graph node identifiers must be strings")
+                if isinstance(weight, bool) or not isinstance(weight, (int, float)) or not math.isfinite(weight):
                     raise ValueError("Graph edge weights must be finite numbers")
+                nodes.add(target)
+        if len(nodes) > 100:
+            raise ValueError("Graph cannot contain more than 100 nodes, including neighbor-only nodes")
         return graph
 
 
