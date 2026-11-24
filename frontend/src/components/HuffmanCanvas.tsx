@@ -180,10 +180,10 @@ const HuffmanCanvas: React.FC<HuffmanCanvasProps> = ({ currentStepData, stepInde
             return 1 + Math.max(left, right);
         };
 
-        const forestWidth = rootIds.reduce((sum, id) => sum + treeWidth(id), 0)
+        const forestWidth = rootIds.reduce<number>((sum, id) => sum + treeWidth(id), 0)
             + Math.max(0, rootIds.length - 1) * TREE_GAP;
         const canvasWidth = Math.max(viewportWidth - 24, forestWidth + 48, 280);
-        const forestHeight = Math.max(1, ...rootIds.map(treeDepth));
+        const forestHeight = Math.max(1, ...rootIds.map(id => treeDepth(id)));
         const canvasHeight = Math.max(230, TOP_PADDING + (forestHeight - 1) * Y_SPACING + NODE_RADIUS * 2 + 46);
         const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
 

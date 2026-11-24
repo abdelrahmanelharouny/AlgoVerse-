@@ -411,7 +411,7 @@ const Playground = () => {
 
                                                 {/* Single Run Visualization */}
                                                 <div className="h-[300px] relative overflow-hidden rounded-lg bg-slate-950/50">
-                                                    <SingleRunVisualizer result={dpResult} type="dp" />
+                                                    <SingleRunVisualizer result={dpResult} type="dp" algorithm={selectedAlgorithm} amount={amount} />
                                                 </div>
                                             </div>
                                         )}

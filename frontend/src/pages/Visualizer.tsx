@@ -173,7 +173,7 @@ const Visualizer: React.FC = () => {
             'Initialize State', 'Sort Candidates', 'Highlight Candidate', 'Update State',
             'Accept Candidate', 'Reject Candidate', 'Finalize Solution', 'Explain Step'
         ];
-        const correct = optionByType[nextStep?.type] ?? 'Finalize Solution';
+        const correct = nextStep ? optionByType[nextStep.type] ?? 'Finalize Solution' : 'Finalize Solution';
         setPredictionQuestion({
             q: 'What kind of operation will the algorithm perform next?',
             options: [...options].sort(() => Math.random() - 0.5),
