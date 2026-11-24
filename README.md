@@ -140,6 +140,8 @@ For production, set `ALLOWED_ORIGINS` to the exact deployed frontend origin(s). 
 
 Every algorithm response contains a shared result contract, typed metrics, a replayable step trace, and a `result_data` object for algorithm-specific output.
 
+Graph inputs may declare a vertex as an adjacency key or only as a neighbor. The API normalizes both forms and applies the 100-node limit to the complete vertex set.
+
 ## Engineering principles
 
 1. **Correctness before new algorithms.** Every algorithm needs deterministic edge-case tests.
