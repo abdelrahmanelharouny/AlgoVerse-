@@ -113,11 +113,12 @@ def test_coin_change_rejects_zero_denomination():
         CoinChangeInput(amount=5, coins=[1, 0, 2])
 
 
-def test_mst_rejects_conflicting_undirected_edge_weights():
+@pytest.mark.parametrize("solver", [solve_prims, solve_kruskals])
+def test_mst_rejects_conflicting_undirected_edge_weights(solver):
     graph = {"A": {"B": 2}, "B": {"A": 3}}
     data = DijkstraInput(graph=graph, start_node="A")
     with pytest.raises(ValueError, match="Conflicting weights"):
-        solve_kruskals(data)
+        solver(data)
 
 
 
@@ -190,3 +191,44 @@ def test_lcs_result_contains_reconstructed_subsequence():
     result = solve_lcs_dp(LCSInput(text1="AGGTAB", text2="GXTXAYB"))
     assert result.result_value == 4
     assert result.result_data["lcs"] == "GTAB"
+
+@pytest.mark.parametrize("coins", [[1, 0, 2], [1, -2], []])
+def test_coin_change_rejects_all_invalid_denomination_shapes(coins):
+    with pytest.raises(ValueError):
+        CoinChangeInput(amount=5, coins=coins)
+
+
+def test_fractional_knapsack_reconstructs_partial_item_selection():
+    data = KnapsackInput(capacity=50, items=[
+        KnapsackItem(id=1, weight=10, value=60),
+        KnapsackItem(id=2, weight=20, value=100),
+        KnapsackItem(id=3, weight=30, value=120),
+    ])
+    result = solve_fractional_knapsack(data)
+    fractions = result.result_data["fractions"]
+
+    assert result.result_value == pytest.approx(240.0)
+    assert fractions[-1]["item_id"] == 3
+    assert fractions[-1]["fraction"] == pytest.approx(2 / 3)
+    assert result.result_data["total_weight"] == pytest.approx(50.0)
+
+
+def test_lis_reconstruction_preserves_original_indices_with_duplicate_values():
+    original = [3, 4, 1, 2, 2, 5]
+    result = solve_lis_dp(LISInput(sequence=original))
+    indices = result.result_data["indices"]
+    sequence = result.result_data["sequence"]
+
+    assert result.result_value == 3
+    assert len(indices) == len(sequence) == 3
+    assert [original[index] for index in indices] == sequence
+    assert all(indices[i] < indices[i + 1] for i in range(len(indices) - 1))
+    assert all(sequence[i] < sequence[i + 1] for i in range(len(sequence) - 1))
+
+
+def test_rod_cutting_reconstructs_an_optimal_exact_length_plan():
+    result = solve_rod_cutting_dp(RodCuttingInput(length=4, prices=[1, 5, 8, 9]))
+
+    assert result.result_value == 10
+    assert result.result_data["cuts"] == [2, 2]
+    assert sum(result.result_data["cuts"]) == 4
