@@ -232,3 +232,18 @@ def test_rod_cutting_reconstructs_an_optimal_exact_length_plan():
     assert result.result_value == 10
     assert result.result_data["cuts"] == [2, 2]
     assert sum(result.result_data["cuts"]) == 4
+
+def test_fractional_knapsack_handles_zero_weight_and_non_positive_items():
+    data = KnapsackInput(capacity=5, items=[
+        KnapsackItem(id="free", weight=0, value=10),
+        KnapsackItem(id="paid", weight=10, value=20),
+        KnapsackItem(id="zero", weight=0, value=0),
+        KnapsackItem(id="negative", weight=0, value=-2),
+    ])
+    result = solve_fractional_knapsack(data)
+    fractions = {item["item_id"]: item["fraction"] for item in result.result_data["fractions"]}
+
+    assert result.result_value == pytest.approx(20.0)
+    assert result.selected_items == ["free", "paid"]
+    assert fractions == {"free": 1.0, "paid": 0.5}
+    assert result.result_data["total_weight"] == pytest.approx(5.0)
