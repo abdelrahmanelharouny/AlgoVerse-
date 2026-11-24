@@ -26,6 +26,8 @@ jobs:
           cache-dependency-path: requirements-dev.txt
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements-dev.txt
+      - name: Verify serverless and Docker dependency parity
+        run: diff -u requirements.txt backend/requirements.txt
       - run: python scripts/check_algorithm_parity.py
       - run: python -m pytest -q
 
@@ -44,4 +46,30 @@ jobs:
       - run: npm run lint
         working-directory: frontend
       - run: npm run build
+        working-directory: frontend
+
+  security-python:
+    name: Python dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip pip-audit
+      - run: pip-audit -r requirements-dev.txt
+
+  security-node:
+    name: Node dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm audit --audit-level=high
         working-directory: frontend
