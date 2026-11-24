@@ -71,5 +71,15 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
+      - name: Apply non-breaking npm security fixes
+        run: npm audit fix
+        working-directory: frontend
+      - name: Emit updated npm lockfile for integration
+        run: |
+          echo "LOCKFILE_BASE64_BEGIN"
+          base64 -w 0 package-lock.json
+          echo
+          echo "LOCKFILE_BASE64_END"
+        working-directory: frontend
       - run: npm audit --audit-level=high
         working-directory: frontend
