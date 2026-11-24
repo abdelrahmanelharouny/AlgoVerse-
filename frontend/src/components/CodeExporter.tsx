@@ -76,25 +76,40 @@ console.log(\`Maximum value: \${result}\`);`
     Greedy solution for Fractional Knapsack
     Time: O(n log n), Space: O(n)
     """
-    # Calculate value-to-weight ratio
+    # Calculate value-to-weight ratio safely; positive zero-weight items come first.
     items_with_ratio = [
-        {**item, 'ratio': item['value'] / item['weight']}
+        {
+            **item,
+            'ratio': (
+                float('inf') if item['weight'] == 0 and item['value'] > 0
+                else (item['value'] / item['weight'] if item['weight'] > 0 else float('-inf'))
+            )
+        }
         for item in items
     ]
-    
+
     # Sort by ratio (descending)
     items_with_ratio.sort(key=lambda x: x['ratio'], reverse=True)
-    
+
     total_value = 0
     remaining_capacity = capacity
-    
+
     for item in items_with_ratio:
-        if remaining_capacity >= item['weight']:
+        if item['value'] <= 0:
+            continue
+
+        # A positive-value zero-weight item can always be taken completely.
+        if item['weight'] == 0:
             total_value += item['value']
-            remaining_capacity -= item['weight']
-        else:
-            # Take fraction
-            total_value += item['value'] * (remaining_capacity / item['weight'])
+            continue
+
+        fraction = min(1.0, remaining_capacity / item['weight'])
+        if fraction <= 0:
+            break
+
+        total_value += item['value'] * fraction
+        remaining_capacity = max(0.0, remaining_capacity - item['weight'] * fraction)
+        if fraction < 1.0:
             break
     
     return total_value
@@ -109,27 +124,35 @@ print(f"Greedy value: {result:.2f}")`,
     // Greedy solution for Fractional Knapsack
     // Time: O(n log n), Space: O(n)
     
-    // Calculate value-to-weight ratio
+    // Calculate value-to-weight ratio without dividing by zero.
     const itemsWithRatio = items.map(item => ({
         ...item,
-        ratio: item.value / item.weight
+        ratio: item.weight === 0
+            ? (item.value > 0 ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY)
+            : item.value / item.weight
     }));
-    
+
     // Sort by ratio (descending)
     itemsWithRatio.sort((a, b) => b.ratio - a.ratio);
-    
+
     let totalValue = 0;
     let remainingCapacity = capacity;
-    
+
     for (const item of itemsWithRatio) {
-        if (remainingCapacity >= item.weight) {
+        if (item.value <= 0) continue;
+
+        // A positive-value zero-weight item can always be taken completely.
+        if (item.weight === 0) {
             totalValue += item.value;
-            remainingCapacity -= item.weight;
-        } else {
-            // Take fraction
-            totalValue += item.value * (remainingCapacity / item.weight);
-            break;
+            continue;
         }
+
+        const fraction = Math.min(1, remainingCapacity / item.weight);
+        if (fraction <= 0) break;
+
+        totalValue += item.value * fraction;
+        remainingCapacity = Math.max(0, remainingCapacity - item.weight * fraction);
+        if (fraction < 1) break;
     }
     
     return totalValue;
